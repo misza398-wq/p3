@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>💪 Cykl PRO – progresja + deload</title>
+    <title>💪 Cykl PRO – ręczny deload + progresja</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
@@ -78,7 +78,7 @@
             </div>
         </div>
         <div style="margin-bottom:14px;">
-            <label><input type="checkbox" id="deload-checkbox"> 🌿 Deload (-10% ciężaru)</label>
+            <label><input type="checkbox" id="deload-checkbox"> 🌿 Deload (ciężar -10%, nie liczy progresji)</label>
         </div>
         <div id="cns-warning" class="warning-box" style="display:none;"></div>
         
@@ -150,7 +150,7 @@
                 <label>Progresja: +<input type="number" id="template-progress-percent" value="5" min="0" max="20" step="0.5" style="width:70px;">% 
                 co <input type="number" id="template-progress-sessions" value="3" min="1" style="width:70px;"> treningi</label>
             </div>
-            <h5>Ćwiczenia (kliknij ✏️ Serie by edytować serie)</h5>
+            <h5>Ćwiczenia</h5>
             <div class="table-responsive">
                 <table id="template-exercises-table">
                     <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Powt.</th><th>Start</th><th></th></tr></thead>
@@ -168,7 +168,7 @@
     <!-- PANEL CYKLU 4-TYGODNIOWEGO -->
     <div id="future-panel" class="panel">
         <h3>📅 Plan na 4 tygodnie</h3>
-        <p>Generuje treningi od wybranej daty z progresją. Nie nadpisuje wykonanych.</p>
+        <p>Generuje treningi od wybranej daty z progresją. Nie nadpisuje wykonanych. Deload tylko ręcznie.</p>
         <button class="btn btn-primary" id="generate-future-plan">🔄 Generuj plan</button>
         <div id="future-plan-container" style="margin-top:18px; overflow-x:auto;"></div>
     </div>
@@ -194,7 +194,7 @@
         let weeklyTemplate = { 1:'strength', 2:'run', 3:'strength', 4:'home', 5:'strength', 6:'run', 0:'rest' };
         let templateAssignments = {};      
         let templates = [];               
-        let templateUsageCount = {};      
+        let templateUsageCount = {};      // licznik TYLKO wykonanych, nie-deload treningów
         
         let currentDisposition = 1.0;
         let progressChart = null, weeklyChart = null;
@@ -305,12 +305,12 @@
             }
         }
 
-        // ---------- GENEROWANIE TRENINGU ----------
+        // ---------- GENEROWANIE TRENINGU (bez automatycznego deload) ----------
         function generateWorkoutFromWeeklyPlan(date, usageCounts = null) {
             const dayOfWeek = date.getDay();
             const type = weeklyTemplate[dayOfWeek] || 'rest';
-            const microWeek = getMesocycleWeek(date);
-            const isDeload = (microWeek === 4);
+            // NIGDY automatyczny deload
+            const isDeload = false;
             
             if(type === 'strength') {
                 const tplId = templateAssignments[dayOfWeek];
@@ -328,10 +328,6 @@
                             let plannedWeight = weight;
                             let plannedReps = ex.reps;
                             
-                            if(isDeload) {
-                                plannedWeight = Math.round(weight * 0.9 * 2) / 2;
-                            }
-                            
                             return {
                                 id: ex.name+Date.now()+idx+Math.random(),
                                 name: ex.name,
@@ -341,17 +337,17 @@
                                 actualSets: Array(sets).fill().map(() => ({ reps: plannedReps, w: plannedWeight }))
                             };
                         });
-                        return { type:'strength', deload: isDeload, templateId: tplId, exercises, completed: false };
+                        return { type:'strength', deload: false, templateId: tplId, exercises, completed: false };
                     }
                 }
-                return { type:'strength', exercises: [], deload: isDeload, completed: false };
+                return { type:'strength', exercises: [], deload: false, completed: false };
             } else if(type !== 'rest') {
                 return { type, duration: (type==='run'?30:45)*60, avgHr: 140, completed: false };
             }
             return { type:'rest', completed: false };
         }
 
-        // ---------- GENEROWANIE 4 TYGODNI Z PROGRESJĄ ----------
+        // ---------- GENEROWANIE 4 TYGODNI (symulacja progresji bez deload) ----------
         function generateFutureFourWeeks() {
             const start = new Date(selectedDate);
             start.setHours(0,0,0,0);
@@ -365,8 +361,6 @@
                 if(!existing || !existing.completed) {
                     const dayOfWeek = d.getDay();
                     const type = weeklyTemplate[dayOfWeek] || 'rest';
-                    const microWeek = getMesocycleWeek(d);
-                    const isDeload = (microWeek === 4);
                     
                     if(type === 'strength') {
                         const tplId = templateAssignments[dayOfWeek];
@@ -380,29 +374,22 @@
                                     for(let j=0; j<increaseCount; j++) weight *= (1 + tpl.progressionPercent/100);
                                     weight = Math.round(weight / 2.5) * 2.5;
                                     
-                                    let sets = ex.sets;
-                                    let plannedWeight = weight;
-                                    let plannedReps = ex.reps;
-                                    
-                                    if(isDeload) {
-                                        plannedWeight = Math.round(weight * 0.9 * 2) / 2;
-                                    }
-                                    
                                     return {
                                         id: ex.name+Date.now()+idx+i,
                                         name: ex.name,
-                                        sets: sets,
-                                        plannedReps: plannedReps,
-                                        plannedWeight: plannedWeight,
-                                        actualSets: Array(sets).fill().map(() => ({ reps: plannedReps, w: plannedWeight }))
+                                        sets: ex.sets,
+                                        plannedReps: ex.reps,
+                                        plannedWeight: weight,
+                                        actualSets: Array(ex.sets).fill().map(() => ({ reps: ex.reps, w: weight }))
                                     };
                                 });
-                                workouts[dateStr] = { type:'strength', deload: isDeload, templateId: tplId, exercises, completed: false };
+                                workouts[dateStr] = { type:'strength', deload: false, templateId: tplId, exercises, completed: false };
+                                // symulacja: zakładamy, że przyszłe treningi będą wykonane jako normalne (nie deload)
                                 simulatedUsage[tplId] = (simulatedUsage[tplId] || 0) + 1;
                                 continue;
                             }
                         }
-                        workouts[dateStr] = { type:'strength', exercises: [], deload: isDeload, completed: false };
+                        workouts[dateStr] = { type:'strength', exercises: [], deload: false, completed: false };
                     } else if(type !== 'rest') {
                         workouts[dateStr] = { type, duration: (type==='run'?30:45)*60, avgHr: 140, completed: false };
                     } else {
@@ -413,7 +400,7 @@
             saveData();
             renderCalendar();
             renderFuturePlan();
-            alert('✅ Wygenerowano plan na 4 tygodnie z progresją.');
+            alert('✅ Wygenerowano plan na 4 tygodnie. Deload należy włączać ręcznie.');
         }
 
         // ---------- SYNCHRONIZACJA MIESIĄCA ----------
@@ -555,18 +542,20 @@
             link.click();
         }
 
-        // ---------- ZAPIS ----------
+        // ---------- ZAPIS (deload nie zwiększa usage) ----------
         document.getElementById('save-workout-btn').addEventListener('click', ()=>{
             const dateStr = formatDate(selectedDate);
             const w = workouts[dateStr];
             if(!w) return;
-            w.deload = document.getElementById('deload-checkbox').checked;
+            const isDeload = document.getElementById('deload-checkbox').checked;
+            w.deload = isDeload;
             w.completed = true;
             if(w.type !== 'strength') {
                 w.duration = parseInt(document.getElementById('cardio-duration').value)*60;
                 w.avgHr = parseInt(document.getElementById('cardio-hr').value);
             }
-            if(w.templateId && w.type==='strength') {
+            // Zwiększ licznik użycia szablonu tylko jeśli to trening siłowy i NIE jest deload
+            if(w.templateId && w.type==='strength' && !isDeload) {
                 templateUsageCount[w.templateId] = (templateUsageCount[w.templateId]||0)+1;
             }
             updateHistoryFromWorkout(new Date(dateStr));
@@ -636,7 +625,7 @@
                 <div style="border:1px solid #e2e8f0; border-radius:16px; padding:14px; margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap;">
                         <strong>${t.name}</strong>
-                        <span>📈 +${t.progressionPercent}% / ${t.progressionSessions} treningi | Użyć: ${templateUsageCount[t.id]||0}</span>
+                        <span>📈 +${t.progressionPercent}% / ${t.progressionSessions} treningi | Wykonano: ${templateUsageCount[t.id]||0}</span>
                         <div>
                             <button class="btn btn-sm edit-template" data-id="${t.id}">✏️</button>
                             <button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button>
