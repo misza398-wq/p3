@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>💪 Cykl PRO – ręczny deload + progresja</title>
+    <title>💪 Cykl PRO – ręczny deload + progresja (fix)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
@@ -305,12 +305,11 @@
             }
         }
 
-        // ---------- GENEROWANIE TRENINGU (bez automatycznego deload) ----------
+        // ---------- GENEROWANIE TRENINGU ----------
         function generateWorkoutFromWeeklyPlan(date, usageCounts = null) {
             const dayOfWeek = date.getDay();
             const type = weeklyTemplate[dayOfWeek] || 'rest';
-            // NIGDY automatyczny deload
-            const isDeload = false;
+            const isDeload = false; // nigdy automatyczny
             
             if(type === 'strength') {
                 const tplId = templateAssignments[dayOfWeek];
@@ -324,17 +323,14 @@
                             for(let i=0; i<increaseCount; i++) weight *= (1 + tpl.progressionPercent/100);
                             weight = Math.round(weight / 2.5) * 2.5;
                             
-                            let sets = ex.sets;
-                            let plannedWeight = weight;
-                            let plannedReps = ex.reps;
-                            
                             return {
                                 id: ex.name+Date.now()+idx+Math.random(),
                                 name: ex.name,
-                                sets: sets,
-                                plannedReps: plannedReps,
-                                plannedWeight: plannedWeight,
-                                actualSets: Array(sets).fill().map(() => ({ reps: plannedReps, w: plannedWeight }))
+                                sets: ex.sets,
+                                plannedReps: ex.reps,
+                                plannedWeight: weight,
+                                actualSets: Array(ex.sets).fill().map(() => ({ reps: ex.reps, w: weight })),
+                                templateExercise: true // oznaczenie, że pochodzi z szablonu
                             };
                         });
                         return { type:'strength', deload: false, templateId: tplId, exercises, completed: false };
@@ -347,7 +343,30 @@
             return { type:'rest', completed: false };
         }
 
-        // ---------- GENEROWANIE 4 TYGODNI (symulacja progresji bez deload) ----------
+        // ---------- AKTUALIZACJA CIĘŻARÓW W ĆWICZENIACH Z SZABLONU ----------
+        function recalcTemplateExercises(workout) {
+            if (!workout || workout.type !== 'strength' || !workout.templateId) return;
+            const tpl = templates.find(t => t.id === workout.templateId);
+            if (!tpl) return;
+            const usage = templateUsageCount[workout.templateId] || 0;
+            const increaseCount = Math.floor(usage / tpl.progressionSessions);
+            
+            workout.exercises.forEach(ex => {
+                if (ex.templateExercise) {
+                    // znajdź odpowiadające ćwiczenie w szablonie po nazwie
+                    const tplEx = tpl.exercises.find(te => te.name === ex.name);
+                    if (tplEx) {
+                        let weight = tplEx.startWeight;
+                        for(let i=0; i<increaseCount; i++) weight *= (1 + tpl.progressionPercent/100);
+                        weight = Math.round(weight / 2.5) * 2.5;
+                        ex.plannedWeight = weight;
+                        // nie zmieniamy actualSets – zostają historyczne lub domyślne
+                    }
+                }
+            });
+        }
+
+        // ---------- GENEROWANIE 4 TYGODNI ----------
         function generateFutureFourWeeks() {
             const start = new Date(selectedDate);
             start.setHours(0,0,0,0);
@@ -380,11 +399,11 @@
                                         sets: ex.sets,
                                         plannedReps: ex.reps,
                                         plannedWeight: weight,
-                                        actualSets: Array(ex.sets).fill().map(() => ({ reps: ex.reps, w: weight }))
+                                        actualSets: Array(ex.sets).fill().map(() => ({ reps: ex.reps, w: weight })),
+                                        templateExercise: true
                                     };
                                 });
                                 workouts[dateStr] = { type:'strength', deload: false, templateId: tplId, exercises, completed: false };
-                                // symulacja: zakładamy, że przyszłe treningi będą wykonane jako normalne (nie deload)
                                 simulatedUsage[tplId] = (simulatedUsage[tplId] || 0) + 1;
                                 continue;
                             }
@@ -400,7 +419,7 @@
             saveData();
             renderCalendar();
             renderFuturePlan();
-            alert('✅ Wygenerowano plan na 4 tygodnie. Deload należy włączać ręcznie.');
+            alert('✅ Wygenerowano plan na 4 tygodnie. Deload włączaj ręcznie.');
         }
 
         // ---------- SYNCHRONIZACJA MIESIĄCA ----------
@@ -420,16 +439,24 @@
             alert('✅ Miesiąc zaktualizowany.');
         }
 
-        // ---------- PANEL TRENINGU ----------
+        // ---------- PANEL TRENINGU (z przeliczaniem progresji) ----------
         function renderWorkoutPanel() {
             const dateStr = formatDate(selectedDate);
-            document.getElementById('selected-date-title').textContent = new Intl.DateTimeFormat('pl', {day:'numeric', month:'long', year:'numeric'}).format(selectedDate);
             let workout = workouts[dateStr];
-            if(!workout) {
+            
+            // Jeśli nie istnieje, generujemy nowy
+            if (!workout) {
                 workout = generateWorkoutFromWeeklyPlan(selectedDate);
                 workouts[dateStr] = workout;
                 saveData();
+            } 
+            // Jeśli istnieje, nie jest wykonany i ma templateId – przeliczamy ciężary z szablonu
+            else if (!workout.completed && workout.type === 'strength' && workout.templateId) {
+                recalcTemplateExercises(workout);
+                saveData(); // zapisz przeliczone ciężary
             }
+            
+            document.getElementById('selected-date-title').textContent = new Intl.DateTimeFormat('pl', {day:'numeric', month:'long', year:'numeric'}).format(selectedDate);
             document.getElementById('deload-checkbox').checked = workout.deload || false;
             document.getElementById('completion-status').textContent = workout.completed ? '✅ Wykonano' : '⏳ Zaplanowano';
             
@@ -542,7 +569,7 @@
             link.click();
         }
 
-        // ---------- ZAPIS (deload nie zwiększa usage) ----------
+        // ---------- ZAPIS ----------
         document.getElementById('save-workout-btn').addEventListener('click', ()=>{
             const dateStr = formatDate(selectedDate);
             const w = workouts[dateStr];
@@ -554,7 +581,6 @@
                 w.duration = parseInt(document.getElementById('cardio-duration').value)*60;
                 w.avgHr = parseInt(document.getElementById('cardio-hr').value);
             }
-            // Zwiększ licznik użycia szablonu tylko jeśli to trening siłowy i NIE jest deload
             if(w.templateId && w.type==='strength' && !isDeload) {
                 templateUsageCount[w.templateId] = (templateUsageCount[w.templateId]||0)+1;
             }
@@ -773,7 +799,7 @@
             function addExercise(name) {
                 const d = formatDate(selectedDate);
                 if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, completed:false };
-                workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedReps:8, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20}) });
+                workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedReps:8, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20}), templateExercise: false });
                 renderWorkoutPanel(); saveData();
                 document.getElementById('add-exercise-form').style.display='none';
                 document.getElementById('custom-exercise-name').value='';
