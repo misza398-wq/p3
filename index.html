@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>💪 Cykl PRO – mobilny</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
+        body { background: #f5f7fa; padding: 12px 8px; color: #1e293b; }
+        .app { max-width: 1300px; margin: 0 auto; }
+        h1 { font-weight: 600; font-size: 1.6rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; flex-wrap: wrap; }
+        .tab { padding: 8px 12px; background: white; border-radius: 30px; font-weight: 500; cursor: pointer; border: 1px solid #cbd5e1; font-size: 0.85rem; white-space: nowrap; }
+        .tab.active { background: #0f172a; color: white; border-color: #0f172a; }
+        .panel { display: none; background: white; border-radius: 20px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #eef2f6; margin-bottom: 16px; }
+        .panel.active { display: block; }
+        .btn { background: white; border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 40px; font-weight: 500; cursor: pointer; transition: 0.1s; font-size: 0.9rem; }
+        .btn-primary { background: #0f172a; color: white; border: none; }
+        .btn-sm { padding: 4px 8px; font-size: 0.8rem; }
+        input, select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 30px; background: white; font-size: 0.9rem; }
+        .editable { background: transparent; border: none; padding: 4px 6px; border-radius: 8px; width: 65px; text-align: center; font-size: 0.9rem; }
+        .editable:focus { outline: 2px solid #3b82f6; background: white; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { text-align: left; padding: 8px 4px; color: #64748b; border-bottom: 1px solid #e2e8f0; font-weight: 500; }
+        td { padding: 8px 4px; border-bottom: 1px solid #edf2f7; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+        .day-cell { aspect-ratio: 1/1; background: #fafbfc; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #eef2f6; position: relative; font-size: 0.9rem; }
+        .day-cell.today { border: 2px solid #0f172a; }
+        .day-cell.selected { background: #0f172a; color: white; }
+        .day-cell.has-workout::after { content: "•"; color: #3b82f6; font-size: 18px; position: absolute; bottom: 0px; right: 2px; }
+        .day-cell.selected.has-workout::after { color: white; }
+        .chart-container { height: 250px; margin-top: 16px; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px 14px; border-radius: 12px; margin-bottom: 16px; font-size: 0.9rem; }
+        .plate-icon { cursor: pointer; margin-left: 4px; font-size: 1.1rem; }
+        .table-responsive { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+        .flex-wrap-mobile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .preset { background: #eef2f6; padding: 6px 10px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+        .future-row { cursor: pointer; transition: background 0.1s; }
+        .future-row:hover { background: #f8fafc; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <h1>📆 Cykl PRO <span style="font-size:0.8rem; background:#e6edf5; padding:4px 10px; border-radius:40px;" id="cycle-indicator">Mezocykl 1 • Tydzień 2/4</span></h1>
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="calendar">📅 Kalendarz</div>
+        <div class="tab" data-tab="workout">🏋️ Trening</div>
+        <div class="tab" data-tab="weekly">🗓️ Tydzień</div>
+        <div class="tab" data-tab="templates">📋 Szablony</div>
+        <div class="tab" data-tab="future">📅 4 tyg.</div>
+        <div class="tab" data-tab="progress">📈 Progres</div>
+    </div>
+
+    <!-- PANEL KALENDARZA -->
+    <div id="calendar-panel" class="panel active">
+        <div class="flex-wrap-mobile" style="justify-content:space-between; margin-bottom:16px;">
+            <button class="btn" id="prev-month">←</button>
+            <h3 id="month-year" style="font-size:1.2rem;">Kwiecień 2026</h3>
+            <button class="btn" id="next-month">→</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; color:#64748b; margin-bottom:6px; font-size:0.8rem;">
+            <span>Pn</span><span>Wt</span><span>Śr</span><span>Cz</span><span>Pt</span><span>So</span><span>Nd</span>
+        </div>
+        <div id="days-container" class="calendar-grid"></div>
+        <div style="margin-top:16px;">
+            <button class="btn btn-primary" id="sync-calendar-from-weekly" style="width:100%;">🔄 Aktualizuj miesiąc z planu</button>
+        </div>
+    </div>
+
+    <!-- PANEL TRENINGU DNIA -->
+    <div id="workout-panel" class="panel">
+        <div class="flex-wrap-mobile" style="justify-content:space-between; margin-bottom:12px;">
+            <h2 id="selected-date-title" style="font-size:1.3rem;">15 kwietnia 2026</h2>
+            <div style="display:flex; gap:4px;">
+                <button class="btn btn-primary" id="save-workout-btn" style="padding:8px 12px;">✔ Zapisz</button>
+                <button class="btn" id="export-txt-btn">📄 TXT</button>
+                <button class="btn" id="refresh-from-weekly-btn">⟲</button>
+            </div>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" id="deload-checkbox"> 🌿 Tydzień deload (-40% ciężaru, seria mniej?) – ręczny</label>
+        </div>
+        <div id="cns-warning" class="warning-box" style="display:none;"></div>
+        
+        <div id="disposition-slider-container" style="margin-bottom:16px; background:#f1f5f9; padding:10px 16px; border-radius:40px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="white-space:nowrap;">😴 Dyspozycja:</span>
+                <input type="range" id="disposition-slider" min="50" max="100" value="100" step="5" style="flex:1; min-width:150px;">
+                <span id="disposition-value" style="min-width:45px;">100%</span>
+            </div>
+        </div>
+
+        <div id="strength-view">
+            <div class="flex-wrap-mobile" style="background:#f8fafc; padding:12px; border-radius:20px; margin-bottom:16px;">
+                <span>🎯 Cel: <strong id="progression-goal">+5%</strong></span>
+                <span>📊 Tonaż plan: <strong id="planned-tonnage">0</strong> kg</span>
+                <span>🔄 <span id="deload-indicator"></span></span>
+                <span>✅ <span id="completion-status">Nie wykonano</span></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Powt.</th><th>Ciężar</th><th>Obj.</th><th></th></tr></thead>
+                    <tbody id="exercises-tbody"></tbody>
+                </table>
+            </div>
+            <div style="text-align:right; font-size:1.1rem; margin:16px 0;">💪 Całk. obciążenie: <span id="total-volume">0</span> kg</div>
+            <button class="btn" id="add-exercise-btn">➕ Dodaj ćwiczenie</button>
+            <div id="add-exercise-form" style="margin-top:16px; background:#f1f5f9; padding:16px; border-radius:20px; display:none;">
+                <strong>Dodaj ćwiczenie:</strong>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0;">
+                    <span class="preset" data-preset="Wyciskanie sztangi leżąc">Wyciskanie</span>
+                    <span class="preset" data-preset="Przysiad ze sztangą">Przysiad</span>
+                    <span class="preset" data-preset="Martwy ciąg">Martwy</span>
+                    <span class="preset" data-preset="Wiosłowanie sztangą">Wiosło</span>
+                    <span class="preset" data-preset="Wyciskanie hantli skos">Hantle</span>
+                    <span class="preset" data-preset="Uginanie ramion ze sztangą">Biceps</span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="custom-exercise-name" placeholder="Własne" style="flex:2">
+                    <button class="btn btn-primary" id="add-custom-exercise">Dodaj</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="cardio-view" style="display:none;">
+            <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:16px;">
+                <label>⏱️ Czas (min): <input type="number" id="cardio-duration" min="1" value="30" style="width:90px;"></label>
+                <label>❤️ Śr. tętno: <input type="number" id="cardio-hr" min="40" max="220" value="140" style="width:90px;"></label>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL PLANU TYGODNIA -->
+    <div id="weekly-panel" class="panel">
+        <h3>🗓️ Plan tygodnia</h3>
+        <p style="font-size:0.9rem;">Ustaw typ i szablon dla każdego dnia.</p>
+        <div id="weekly-plan-container" style="margin:16px 0; display:grid; gap:10px;"></div>
+        <button class="btn btn-primary" id="save-weekly-template" style="width:100%;">💾 Zapisz plan</button>
+    </div>
+
+    <!-- PANEL SZABLONÓW TRENINGOWYCH -->
+    <div id="templates-panel" class="panel">
+        <div class="flex-wrap-mobile" style="justify-content:space-between; margin-bottom:16px;">
+            <h3>📋 Szablony</h3>
+            <button class="btn btn-primary" id="create-template-btn">➕ Nowy</button>
+        </div>
+        <div id="templates-list"></div>
+        <div id="template-form" style="display:none; margin-top:16px; background:#f1f5f9; padding:16px; border-radius:20px;">
+            <h4 id="template-form-title">Nowy szablon</h4>
+            <input type="hidden" id="edit-template-id">
+            <label style="display:block; margin-bottom:8px;">Nazwa: <input type="text" id="template-name" placeholder="np. Push A" style="width:100%;"></label>
+            <div style="margin:12px 0;">
+                <label>Progresja: + 
+                    <input type="number" id="template-progress-percent" value="5" min="0" max="20" step="0.5" style="width:70px;">% co 
+                    <input type="number" id="template-progress-sessions" value="3" min="1" style="width:60px;"> treningi
+                </label>
+            </div>
+            <h5>Ćwiczenia (kliknij ✏️ Serie aby edytować każdą serię osobno)</h5>
+            <div class="table-responsive">
+                <table id="template-exercises-table">
+                    <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Powt.</th><th>Start</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <button class="btn btn-sm" id="add-exercise-to-template">➕ Dodaj ćwiczenie</button>
+            <div style="margin-top:16px; display:flex; gap:8px;">
+                <button class="btn btn-primary" id="save-template-btn">Zapisz</button>
+                <button class="btn" id="cancel-template-btn">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL CYKLU 4-TYGODNIOWEGO -->
+    <div id="future-panel" class="panel">
+        <h3>📅 Plan na 4 tygodnie</h3>
+        <p style="font-size:0.9rem;">Generuje od dziś z progresją. Deload zaznacz ręcznie w treningu.</p>
+        <button class="btn btn-primary" id="generate-future-plan" style="width:100%; margin-bottom:12px;">🔄 Generuj i zapisz</button>
+        <div class="table-responsive" id="future-plan-container"></div>
+    </div>
+
+    <!-- PANEL PROGRESU -->
+    <div id="progress-panel" class="panel">
+        <h3>📊 Progres ćwiczeń</h3>
+        <select id="progress-exercise-select" class="btn" style="width:100%; margin-bottom:12px;"></select>
+        <div class="chart-container"><canvas id="progress-chart"></canvas></div>
+        <h3 style="margin-top:24px;">📅 Tonaż tygodniowy</h3>
+        <div class="chart-container"><canvas id="weekly-volume-chart"></canvas></div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        "use strict";
+        // ---------- STAN ----------
+        let currentDate = new Date(2026, 3, 15);
+        let selectedDate = new Date(currentDate);
+        let workouts = {};                
+        let exerciseHistory = {};         
+        let weeklyTemplate = { 1:'strength', 2:'run', 3:'strength', 4:'home', 5:'strength', 6:'run', 0:'rest' };
+        let templateAssignments = {};      
+        let templates = [];               
+        let templateUsageCount = {};      
+        let currentDisposition = 1.0;
+        let progressChart = null, weeklyChart = null;
+        
+        // ---------- LOCALSTORAGE ----------
+        function loadData() {
+            const saved = localStorage.getItem('cykl_app_data');
+            if(saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    workouts = data.workouts || {};
+                    exerciseHistory = data.exerciseHistory || {};
+                    weeklyTemplate = data.weeklyTemplate || weeklyTemplate;
+                    templateAssignments = data.templateAssignments || {};
+                    templates = data.templates || [];
+                    templateUsageCount = data.templateUsageCount || {};
+                    Object.values(workouts).forEach(w => { if (w.completed === undefined) w.completed = false; });
+                } catch(e){}
+            }
+            if(templates.length === 0) createDefaultTemplates();
+            if(Object.keys(workouts).length === 0) generateDemoData();
+        }
+        function saveData() {
+            localStorage.setItem('cykl_app_data', JSON.stringify({
+                workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, templateUsageCount
+            }));
+        }
+        function createDefaultTemplates() {
+            templates.push({
+                id: 'tpl1', name: 'Push A', progressionPercent: 5, progressionSessions: 3,
+                exercises: [
+                    { name: 'Wyciskanie sztangi leżąc', sets: 4, reps: 8, startWeight: 80, series: null },
+                    { name: 'Wyciskanie hantli skos', sets: 3, reps: 10, startWeight: 28, series: null }
+                ]
+            });
+            templates.push({
+                id: 'tpl2', name: 'Pull A', progressionPercent: 5, progressionSessions: 3,
+                exercises: [
+                    { name: 'Wiosłowanie sztangą', sets: 4, reps: 8, startWeight: 70, series: null },
+                    { name: 'Uginanie ramion ze sztangą', sets: 3, reps: 12, startWeight: 30, series: null }
+                ]
+            });
+            templateUsageCount = { 'tpl1': 2, 'tpl2': 1 };
+            saveData();
+        }
+        function generateDemoData() {
+            const d1 = '2026-04-08', d2 = '2026-04-10', d3 = '2026-04-12', d4 = '2026-04-14';
+            workouts[d1] = { type:'strength', deload:false, templateId:'tpl1', completed: true, exercises:[
+                { id:'b1', name:'Wyciskanie sztangi leżąc', sets:4, plannedReps:8, plannedWeight:80, actualSets:[{reps:8,w:80},{reps:8,w:80},{reps:7,w:80},{reps:7,w:80}] }
+            ]};
+            workouts[d2] = { type:'strength', deload:false, templateId:'tpl2', completed: true, exercises:[
+                { id:'b2', name:'Wiosłowanie sztangą', sets:4, plannedReps:8, plannedWeight:70, actualSets:[{reps:8,w:70},{reps:8,w:70},{reps:8,w:70},{reps:6,w:70}] }
+            ]};
+            workouts[d3] = { type:'run', duration:40*60, avgHr:155, completed: false };
+            workouts[d4] = { type:'run', duration:50*60, avgHr:148, completed: false };
+            Object.keys(workouts).forEach(d => { if(workouts[d].type==='strength') updateHistoryFromWorkout(new Date(d)); });
+            saveData();
+        }
+
+        // ---------- POMOCNICZE ----------
+        function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+        function getWeekNumber(d) {
+            const date = new Date(d); date.setHours(0,0,0,0);
+            date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+            const week1 = new Date(date.getFullYear(), 0, 4);
+            return 1 + Math.round(((date - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+        }
+        function updateCycleIndicator() {
+            const week = getWeekNumber(selectedDate);
+            const micro = week % 4 === 0 ? 4 : week % 4;
+            document.getElementById('cycle-indicator').innerHTML = `Mezocykl 1 • Tydzień ${micro}/4`;
+            return micro;
+        }
+
+        // ---------- KALENDARZ ----------
+        function renderCalendar() {
+            const year = currentDate.getFullYear(), month = currentDate.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const startDate = new Date(firstDay);
+            startDate.setDate(1 - (firstDay.getDay() === 0 ? 6 : firstDay.getDay()-1));
+            document.getElementById('month-year').textContent = new Intl.DateTimeFormat('pl', {month:'long', year:'numeric'}).format(currentDate).replace(/^./, c=>c.toUpperCase());
+            const grid = document.getElementById('days-container');
+            grid.innerHTML = '';
+            const todayStr = formatDate(new Date()), selectedStr = formatDate(selectedDate);
+            for(let i=0; i<42; i++) {
+                const cellDate = new Date(startDate); cellDate.setDate(startDate.getDate() + i);
+                const dateStr = formatDate(cellDate);
+                const hasWorkout = !!workouts[dateStr];
+                const cell = document.createElement('div');
+                cell.className = 'day-cell';
+                if(dateStr === todayStr) cell.classList.add('today');
+                if(dateStr === selectedStr) cell.classList.add('selected');
+                if(hasWorkout) cell.classList.add('has-workout');
+                if(cellDate.getMonth() !== month) cell.style.opacity = '0.5';
+                cell.textContent = cellDate.getDate();
+                cell.addEventListener('click', ()=>{
+                    selectedDate = new Date(cellDate);
+                    renderCalendar();
+                    updateCycleIndicator();
+                    document.querySelector('[data-tab="workout"]').click();
+                    renderWorkoutPanel();
+                });
+                grid.appendChild(cell);
+            }
+        }
+
+        // ---------- GENEROWANIE TRENINGU Z PLANU TYGODNIA (ręczny deload) ----------
+        function generateWorkoutFromWeeklyPlan(date, deloadActive = false) {
+            const dayOfWeek = date.getDay();
+            const type = weeklyTemplate[dayOfWeek] || 'rest';
+            
+            if(type === 'strength') {
+                const tplId = templateAssignments[dayOfWeek];
+                if(tplId) {
+                    const tpl = templates.find(t => t.id === tplId);
+                    if(tpl) {
+                        const usage = templateUsageCount[tplId] || 0;
+                        const increaseCount = Math.floor(usage / tpl.progressionSessions);
+                        const exercises = tpl.exercises.map((ex, idx) => {
+                            let weight = ex.startWeight;
+                            for(let i=0; i<increaseCount; i++) weight *= (1 + tpl.progressionPercent/100);
+                            weight = Math.round(weight / 2.5) * 2.5;
+                            
+                            let sets = ex.sets;
+                            let plannedWeight = weight;
+                            let plannedReps = ex.reps;
+                            
+                            if(deloadActive) {
+                                // Ręczny deload: serie bez zmian (lub opcjonalnie zmniejszamy), ciężar -10%
+                                plannedWeight = Math.round(weight * 0.9 * 2) / 2;
+                            }
+                            
+                            // Jeśli szablon ma zdefiniowane konkretne serie (series), użyj ich
+                            let actualSetsTemplate = null;
+                            if (ex.series) {
+                                actualSetsTemplate = ex.series.map(s => ({ reps: s.reps, w: s.weight }));
+                            } else {
+                                actualSetsTemplate = Array(sets).fill().map(() => ({ reps: plannedReps, w: plannedWeight }));
+                            }
+                            
+                            return {
+                                id: ex.name+Date.now()+idx,
+                                name: ex.name,
+                                sets: sets,
+                                plannedReps: plannedReps,
+                                plannedWeight: plannedWeight,
+                                actualSets: actualSetsTemplate
+                            };
+                        });
+                        return { type:'strength', deload: deloadActive, templateId: tplId, exercises, completed: false };
+                    }
+                }
+                return { type:'strength', exercises: [], deload: deloadActive, completed: false };
+            } else if(type !== 'rest') {
+                return { type, duration: (type==='run'?30:45)*60, avgHr: 140, completed: false };
+            }
+            return { type:'rest', completed: false };
+        }
+
+        // ---------- SYNCHRONIZACJA KALENDARZA ----------
+        function syncCalendarFromWeeklyPlan() {
+            const year = currentDate.getFullYear(), month = currentDate.getMonth();
+            const daysInMonth = new Date(year, month+1, 0).getDate();
+            for(let d=1; d<=daysInMonth; d++) {
+                const date = new Date(year, month, d);
+                const dateStr = formatDate(date);
+                const existing = workouts[dateStr];
+                if(!existing || !existing.completed) {
+                    workouts[dateStr] = generateWorkoutFromWeeklyPlan(date, false);
+                }
+            }
+            saveData();
+            renderCalendar();
+            alert('✅ Zaktualizowano (wykonane pominięte).');
+        }
+
+        function generateFutureFourWeeks() {
+            const start = new Date(selectedDate);
+            start.setHours(0,0,0,0);
+            for(let i=0; i<28; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                const dateStr = formatDate(d);
+                const existing = workouts[dateStr];
+                if(!existing || !existing.completed) {
+                    workouts[dateStr] = generateWorkoutFromWeeklyPlan(d, false);
+                }
+            }
+            saveData();
+            renderCalendar();
+            renderFuturePlan();
+            alert('✅ Wygenerowano 4 tygodnie.');
+        }
+
+        // ---------- PANEL TRENINGU ----------
+        function renderWorkoutPanel() {
+            const dateStr = formatDate(selectedDate);
+            document.getElementById('selected-date-title').textContent = new Intl.DateTimeFormat('pl', {day:'numeric', month:'long', year:'numeric'}).format(selectedDate);
+            let workout = workouts[dateStr];
+            if(!workout) {
+                workout = generateWorkoutFromWeeklyPlan(selectedDate, false);
+                workouts[dateStr] = workout;
+                saveData();
+            }
+            document.getElementById('deload-checkbox').checked = workout.deload || false;
+            document.getElementById('completion-status').textContent = workout.completed ? '✅ Wykonano' : '⏳ Zaplanowano';
+            
+            toggleWorkoutView(workout.type);
+            if(workout.type === 'strength') {
+                checkCNSFatigue(dateStr);
+                renderStrengthExercises(workout.exercises);
+                updateDeloadInfo();
+            } else if(workout.type !== 'rest') {
+                document.getElementById('cardio-duration').value = workout.duration ? Math.round(workout.duration/60) : 30;
+                document.getElementById('cardio-hr').value = workout.avgHr || 140;
+            }
+            const tpl = templates[0];
+            document.getElementById('progression-goal').textContent = `+${tpl?.progressionPercent || 5}%`;
+            calculateTotalVolume();
+        }
+        function toggleWorkoutView(type) {
+            document.getElementById('strength-view').style.display = type==='strength'?'block':'none';
+            document.getElementById('cardio-view').style.display = (type==='run' || type==='home')?'block':'none';
+            document.getElementById('disposition-slider-container').style.display = type==='strength'?'block':'none';
+        }
+        function checkCNSFatigue(dateStr) {
+            const prev = new Date(selectedDate); prev.setDate(prev.getDate()-1);
+            const w = workouts[formatDate(prev)];
+            const warn = document.getElementById('cns-warning');
+            if(w && (w.type==='run'||w.type==='home') && w.avgHr > 150) {
+                warn.style.display='block';
+                warn.innerHTML = `⚠️ Wczoraj intensywny bieg (tętno ${w.avgHr}).`;
+            } else warn.style.display='none';
+        }
+        function updateDeloadInfo() {
+            const w = workouts[formatDate(selectedDate)];
+            const ind = document.getElementById('deload-indicator');
+            ind.textContent = w?.deload ? '🌿 Deload aktywny (-10% ciężaru)' : '';
+        }
+        function renderStrengthExercises(exercises) {
+            const tbody = document.getElementById('exercises-tbody');
+            tbody.innerHTML = '';
+            let plannedTonnage = 0;
+            const dateStr = formatDate(selectedDate);
+            const workout = workouts[dateStr];
+            const isDeload = workout?.deload || false;
+            exercises.forEach((ex, idx) => {
+                const sets = ex.sets || 3;
+                const baseWeight = ex.plannedWeight || 20;
+                const scaledWeight = Math.round(baseWeight * currentDisposition * 2) / 2;
+                const reps = ex.plannedReps || 8;
+                plannedTonnage += scaledWeight * reps * sets;
+                let volume = 0;
+                if(ex.actualSets) ex.actualSets.forEach(s => volume += s.w * s.reps);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${ex.name}</strong></td>
+                    <td><input type="number" class="editable sets-count" data-idx="${idx}" value="${sets}" min="1" style="width:55px"></td>
+                    <td><input type="number" class="editable planned-reps" data-idx="${idx}" value="${reps}" min="1" style="width:55px"></td>
+                    <td class="weight-cell">
+                        <input type="number" class="editable planned-weight" data-idx="${idx}" value="${scaledWeight}" step="0.5" style="width:75px">
+                        <span class="plate-icon" data-weight="${scaledWeight}">🏋️</span>
+                    </td>
+                    <td>${volume} kg</td>
+                    <td>
+                        <button class="btn btn-sm edit-sets-btn" data-idx="${idx}">✏️</button>
+                        <button class="btn btn-sm remove-exercise" data-idx="${idx}">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            document.getElementById('planned-tonnage').textContent = plannedTonnage.toFixed(0);
+            document.querySelectorAll('.edit-sets-btn').forEach(b => b.addEventListener('click', (e)=> openSetEditor(parseInt(b.dataset.idx))));
+            document.querySelectorAll('.remove-exercise').forEach(b => b.addEventListener('click', (e)=> {
+                const idx = parseInt(b.dataset.idx);
+                workouts[dateStr].exercises.splice(idx,1);
+                renderWorkoutPanel(); saveData();
+            }));
+            document.querySelectorAll('.sets-count, .planned-reps, .planned-weight').forEach(inp => inp.addEventListener('change', function(){
+                const idx = this.dataset.idx;
+                const ex = workouts[dateStr].exercises[idx];
+                if(this.classList.contains('sets-count')) ex.sets = parseInt(this.value);
+                else if(this.classList.contains('planned-reps')) ex.plannedReps = parseInt(this.value);
+                else ex.plannedWeight = parseFloat(this.value);
+                renderWorkoutPanel(); saveData();
+            }));
+            document.querySelectorAll('.plate-icon').forEach(icon => icon.addEventListener('click', (e)=>{
+                const w = parseFloat(icon.dataset.weight);
+                let rem = (w-20)/2;
+                const plates = [25,20,15,10,5,2.5,1.25];
+                const used = {};
+                plates.forEach(p=>{ used[p]=0; while(rem>=p){ used[p]++; rem-=p; } });
+                let msg = `${w} kg → Gryf 20kg + `;
+                msg += Object.entries(used).filter(([p,c])=>c>0).map(([p,c])=>`${c}×${p}kg`).join(' + ') || 'brak';
+                alert(msg);
+            }));
+            calculateTotalVolume();
+        }
+        function openSetEditor(idx) {
+            const dateStr = formatDate(selectedDate);
+            const ex = workouts[dateStr].exercises[idx];
+            const sets = ex.actualSets || Array(ex.sets).fill({reps: ex.plannedReps, w: ex.plannedWeight});
+            let html = `<h4>${ex.name}</h4>`;
+            sets.forEach((s,i)=> html+=`<div>Seria ${i+1}: <input id="s-${i}-r" value="${s.reps}" style="width:60px"> x <input id="s-${i}-w" value="${s.w}" style="width:70px"> kg</div>`);
+            html += `<button id="save-sets" class="btn btn-primary" style="margin-top:12px;">Zapisz</button>`;
+            const modal = document.createElement('div'); 
+            modal.style.cssText='position:fixed;top:20%;left:5%;right:5%;background:#fff;padding:24px;border-radius:24px;z-index:1000;box-shadow:0 10px 25px rgba(0,0,0,0.2);';
+            modal.innerHTML = html; 
+            document.body.appendChild(modal);
+            document.getElementById('save-sets').onclick = ()=>{
+                const newSets = [];
+                for(let i=0;i<sets.length;i++) {
+                    newSets.push({
+                        reps: +document.getElementById(`s-${i}-r`).value, 
+                        w: +document.getElementById(`s-${i}-w`).value
+                    });
+                }
+                ex.actualSets = newSets; 
+                modal.remove(); 
+                renderWorkoutPanel(); 
+                saveData();
+            };
+        }
+        function calculateTotalVolume() {
+            const w = workouts[formatDate(selectedDate)];
+            let total = 0;
+            if(w?.type === 'strength' && w.exercises) {
+                w.exercises.forEach(ex => { 
+                    if(ex.actualSets) ex.actualSets.forEach(s => total += s.w * s.reps); 
+                });
+            }
+            document.getElementById('total-volume').textContent = total;
+        }
+
+        // ---------- EKSPORT ----------
+        function exportToTxt() {
+            const dateStr = formatDate(selectedDate);
+            const w = workouts[dateStr];
+            if(!w) return alert('Brak treningu.');
+            let content = `Trening: ${new Intl.DateTimeFormat('pl').format(selectedDate)}\nTyp: ${w.type}\n`;
+            if(w.type === 'strength') {
+                w.exercises.forEach(ex => {
+                    content += `${ex.name} (${ex.sets} serie, cel: ${ex.plannedReps} @ ${ex.plannedWeight} kg)\n`;
+                    if(ex.actualSets) ex.actualSets.forEach((s, i) => { content += `  Seria ${i+1}: ${s.reps} x ${s.w} kg\n`; });
+                });
+            } else {
+                content += `Czas: ${Math.round(w.duration/60)} min, tętno: ${w.avgHr}\n`;
+            }
+            const blob = new Blob([content], {type: 'text/plain'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `trening_${dateStr}.txt`;
+            link.click();
+        }
+
+        // ---------- ZAPIS ----------
+        document.getElementById('save-workout-btn').addEventListener('click', ()=>{
+            const dateStr = formatDate(selectedDate);
+            const w = workouts[dateStr];
+            if(!w) return;
+            w.deload = document.getElementById('deload-checkbox').checked;
+            w.completed = true;
+            if(w.type !== 'strength') {
+                w.duration = parseInt(document.getElementById('cardio-duration').value)*60;
+                w.avgHr = parseInt(document.getElementById('cardio-hr').value);
+            }
+            if(w.templateId && w.type==='strength') {
+                templateUsageCount[w.templateId] = (templateUsageCount[w.templateId]||0)+1;
+            }
+            updateHistoryFromWorkout(new Date(dateStr));
+            saveData(); renderCalendar();
+            alert('✅ Zapisano jako wykonany!');
+            renderWorkoutPanel();
+        });
+        function updateHistoryFromWorkout(date) {
+            const w = workouts[formatDate(date)];
+            if(!w || w.type!=='strength') return;
+            w.exercises.forEach(ex => {
+                const id = ex.name;
+                if(!exerciseHistory[id]) exerciseHistory[id] = [];
+                let maxW=0, e1rm=0, vol=0;
+                if(ex.actualSets) ex.actualSets.forEach(s=>{
+                    if(s.w>maxW) maxW=s.w;
+                    const e = s.w*(1+s.reps/30); if(e>e1rm) e1rm=e;
+                    vol += s.w*s.reps;
+                });
+                exerciseHistory[id].push({ date: formatDate(date), maxWeight: maxW, e1rm: Math.round(e1rm*10)/10, volume: vol });
+            });
+        }
+
+        // ---------- PLAN TYGODNIA ----------
+        function renderWeeklyPanel() {
+            const container = document.getElementById('weekly-plan-container');
+            const days = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
+            container.innerHTML = '';
+            days.forEach((name, i) => {
+                const dayIndex = i===6 ? 0 : i+1;
+                const div = document.createElement('div');
+                div.style.display='flex'; div.style.alignItems='center'; div.style.gap='8px'; div.style.flexWrap='wrap';
+                const typeSelect = document.createElement('select');
+                typeSelect.className = 'weekly-type btn'; typeSelect.dataset.day = dayIndex;
+                typeSelect.style.flex = '1 1 120px';
+                ['rest','strength','run','home'].forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v==='rest'?'Odp':v==='strength'?'Sił':v==='run'?'Bieg':'Dom'; typeSelect.appendChild(o); });
+                typeSelect.value = weeklyTemplate[dayIndex] || 'rest';
+                const tplSelect = document.createElement('select');
+                tplSelect.className = 'weekly-template btn'; tplSelect.dataset.day = dayIndex;
+                tplSelect.style.flex = '2 1 140px';
+                tplSelect.style.display = typeSelect.value==='strength'?'inline':'none';
+                tplSelect.innerHTML = '<option value="">-- Brak --</option>';
+                templates.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; tplSelect.appendChild(o); });
+                if(templateAssignments[dayIndex]) tplSelect.value = templateAssignments[dayIndex];
+                typeSelect.addEventListener('change', ()=>{
+                    tplSelect.style.display = typeSelect.value==='strength'?'inline':'none';
+                });
+                div.appendChild(document.createTextNode(name.substring(0,3)+'.'));
+                div.appendChild(typeSelect);
+                div.appendChild(tplSelect);
+                container.appendChild(div);
+            });
+        }
+        document.getElementById('save-weekly-template').addEventListener('click', ()=>{
+            document.querySelectorAll('.weekly-type').forEach(sel => {
+                const day = sel.dataset.day;
+                weeklyTemplate[day] = sel.value;
+                const tplSel = document.querySelector(`.weekly-template[data-day="${day}"]`);
+                if(sel.value === 'strength') templateAssignments[day] = tplSel.value;
+                else delete templateAssignments[day];
+            });
+            saveData(); alert('✅ Plan zapisany!');
+        });
+
+        // ---------- SZABLONY (edycja serii) ----------
+        function renderTemplatesPanel() {
+            const list = document.getElementById('templates-list');
+            list.innerHTML = templates.map(t => `
+                <div style="border:1px solid #e2e8f0; border-radius:16px; padding:12px; margin-bottom:12px;">
+                    <div class="flex-wrap-mobile" style="justify-content:space-between;">
+                        <strong>${t.name}</strong>
+                        <span style="font-size:0.8rem;">+${t.progressionPercent}% / ${t.progressionSessions} tr. (użyto: ${templateUsageCount[t.id]||0})</span>
+                        <div>
+                            <button class="btn btn-sm edit-template" data-id="${t.id}">✏️</button>
+                            <button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button>
+                        </div>
+                    </div>
+                    <ul style="margin-top:8px; font-size:0.9rem;">${t.exercises.map(e=>`<li>${e.name}: ${e.sets}x${e.reps} @ ${e.startWeight}kg</li>`).join('')}</ul>
+                </div>
+            `).join('');
+            document.querySelectorAll('.edit-template').forEach(b => b.addEventListener('click', ()=> editTemplate(b.dataset.id)));
+            document.querySelectorAll('.delete-template').forEach(b => b.addEventListener('click', ()=> {
+                templates = templates.filter(t => t.id !== b.dataset.id);
+                saveData(); renderTemplatesPanel(); renderWeeklyPanel();
+            }));
+        }
+        function editTemplate(id) {
+            const tpl = templates.find(t => t.id === id);
+            if(!tpl) return;
+            document.getElementById('template-form-title').textContent = 'Edytuj szablon';
+            document.getElementById('edit-template-id').value = id;
+            document.getElementById('template-name').value = tpl.name;
+            document.getElementById('template-progress-percent').value = tpl.progressionPercent;
+            document.getElementById('template-progress-sessions').value = tpl.progressionSessions;
+            renderTemplateExercisesTable(tpl.exercises);
+            document.getElementById('template-form').style.display = 'block';
+        }
+        function renderTemplateExercisesTable(exercises) {
+            const tbody = document.querySelector('#template-exercises-table tbody');
+            tbody.innerHTML = '';
+            exercises.forEach((ex, idx) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="text" value="${ex.name}" class="tpl-ex-name" style="width:100%"></td>
+                    <td><input type="number" value="${ex.sets}" min="1" class="tpl-ex-sets" style="width:60px"></td>
+                    <td><input type="number" value="${ex.reps}" min="1" class="tpl-ex-reps" style="width:60px"></td>
+                    <td><input type="number" value="${ex.startWeight}" step="0.5" class="tpl-ex-weight" style="width:75px"></td>
+                    <td>
+                        <button class="btn btn-sm edit-series-tpl" data-idx="${idx}">✏️ Serie</button>
+                        <button class="btn btn-sm remove-tpl-ex">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+                row.querySelector('.edit-series-tpl').addEventListener('click', () => openTemplateSeriesEditor(idx, ex));
+                row.querySelector('.remove-tpl-ex').addEventListener('click', () => row.remove());
+            });
+        }
+        function openTemplateSeriesEditor(idx, exercise) {
+            const sets = exercise.series || Array(exercise.sets).fill({reps: exercise.reps, weight: exercise.startWeight});
+            let html = `<h4>${exercise.name}</h4>`;
+            sets.forEach((s,i)=> html+=`<div>Seria ${i+1}: <input id="tpl-s-${i}-r" value="${s.reps}" style="width:60px"> x <input id="tpl-s-${i}-w" value="${s.weight}" style="width:70px"> kg</div>`);
+            html += `<button id="save-tpl-series" class="btn btn-primary" style="margin-top:12px;">Zapisz serie</button>`;
+            const modal = document.createElement('div'); 
+            modal.style.cssText='position:fixed;top:20%;left:5%;right:5%;background:#fff;padding:24px;border-radius:24px;z-index:1000;';
+            modal.innerHTML = html; 
+            document.body.appendChild(modal);
+            document.getElementById('save-tpl-series').onclick = ()=>{
+                const newSeries = [];
+                for(let i=0;i<sets.length;i++) {
+                    newSeries.push({
+                        reps: +document.getElementById(`tpl-s-${i}-r`).value,
+                        weight: +document.getElementById(`tpl-s-${i}-w`).value
+                    });
+                }
+                exercise.series = newSeries;
+                modal.remove();
+                // Odśwież tabelę szablonu
+                const tplId = document.getElementById('edit-template-id').value;
+                if(tplId) {
+                    const tpl = templates.find(t=>t.id===tplId);
+                    if(tpl) renderTemplateExercisesTable(tpl.exercises);
+                }
+            };
+        }
+        function getTemplateExercisesFromForm() {
+            const rows = document.querySelectorAll('#template-exercises-table tbody tr');
+            const exs = [];
+            rows.forEach((row, idx) => {
+                const name = row.querySelector('.tpl-ex-name').value;
+                const sets = parseInt(row.querySelector('.tpl-ex-sets').value);
+                const reps = parseInt(row.querySelector('.tpl-ex-reps').value);
+                const weight = parseFloat(row.querySelector('.tpl-ex-weight').value);
+                if(name && sets>0) {
+                    // Pobierz serie jeśli były edytowane
+                    const existingEx = templates.find(t=>t.id===document.getElementById('edit-template-id').value)?.exercises[idx];
+                    exs.push({ name, sets, reps, startWeight: weight, series: existingEx?.series || null });
+                }
+            });
+            return exs;
+        }
+
+        // ---------- CYKL 4 TYGODNIE (klikalne dni) ----------
+        function renderFuturePlan() {
+            const container = document.getElementById('future-plan-container');
+            const startDate = new Date(selectedDate);
+            let html = '<table style="min-width:600px;"><tr><th>Data</th><th>Typ</th><th>Opis</th><th>Status</th></tr>';
+            for(let i=0; i<28; i++) {
+                const d = new Date(startDate); d.setDate(startDate.getDate()+i);
+                const dateStr = formatDate(d);
+                const existing = workouts[dateStr];
+                const planned = existing ? existing : generateWorkoutFromWeeklyPlan(d, false);
+                const type = planned.type;
+                let desc = '';
+                if(type === 'strength') {
+                    const tplId = planned.templateId;
+                    if(tplId) {
+                        const tpl = templates.find(t=>t.id===tplId);
+                        if(tpl) desc = `${tpl.name}: ` + planned.exercises.map(e=>`${e.name} ${e.plannedWeight}kg`).join(', ');
+                    } else desc = 'Siłownia (brak szablonu)';
+                } else if(type === 'run') desc = `Bieg ${Math.round(planned.duration/60)} min`;
+                else if(type === 'home') desc = `Dom ${Math.round(planned.duration/60)} min`;
+                else desc = 'Odpoczynek';
+                const status = existing?.completed ? '✅' : '⏳';
+                html += `<tr class="future-row" data-date="${dateStr}" style="cursor:pointer;"><td>${dateStr.slice(5)}</td><td>${type}</td><td>${desc}</td><td>${status}</td></tr>`;
+            }
+            html += '</table>';
+            container.innerHTML = html;
+            document.querySelectorAll('.future-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    const dateStr = row.dataset.date;
+                    selectedDate = new Date(dateStr + 'T12:00:00');
+                    renderCalendar();
+                    updateCycleIndicator();
+                    document.querySelector('[data-tab="workout"]').click();
+                    renderWorkoutPanel();
+                });
+            });
+        }
+
+        // ---------- PROGRES ----------
+        function populateProgressSelect() {
+            const sel = document.getElementById('progress-exercise-select');
+            sel.innerHTML = '';
+            const exs = Object.keys(exerciseHistory);
+            if(!exs.length) { sel.innerHTML='<option>Brak danych</option>'; return; }
+            exs.forEach(e=>{ const o=document.createElement('option'); o.value=e; o.textContent=e; sel.appendChild(o); });
+            renderProgressChart(exs[0]);
+        }
+        function renderProgressChart(exName) {
+            const hist = exerciseHistory[exName]||[];
+            if(progressChart) progressChart.destroy();
+            const ctx = document.getElementById('progress-chart').getContext('2d');
+            progressChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hist.map(h=>h.date),
+                    datasets: [
+                        { label: 'E1RM (kg)', data: hist.map(h=>h.e1rm), borderColor: '#f97316', yAxisID: 'y', tension: 0.2 },
+                        { label: 'Objętość (kg)', data: hist.map(h=>h.volume), borderColor: '#3b82f6', yAxisID: 'y1', tension: 0.2 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { type:'linear', position:'left' }, y1: { type:'linear', position:'right', grid: { drawOnChartArea: false } } } }
+            });
+        }
+        function renderWeeklyVolumeChart() {
+            const vols = {};
+            Object.entries(workouts).forEach(([d,w])=>{
+                if(w.type!=='strength' || !w.completed) return;
+                const week = getWeekNumber(new Date(d));
+                const key = `${new Date(d).getFullYear()}-W${week}`;
+                let v=0; w.exercises?.forEach(ex=>{ if(ex.actualSets) ex.actualSets.forEach(s=> v+= s.w*s.reps); });
+                vols[key] = (vols[key]||0)+v;
+            });
+            const keys = Object.keys(vols).sort();
+            if(weeklyChart) weeklyChart.destroy();
+            const ctx = document.getElementById('weekly-volume-chart').getContext('2d');
+            weeklyChart = new Chart(ctx, { type:'bar', data:{ labels:keys, datasets:[{ label:'Tonaż (kg)', data: keys.map(k=>vols[k]), backgroundColor:'#3b82f6' }] } });
+        }
+
+        // ---------- INICJALIZACJA ----------
+        document.addEventListener('DOMContentLoaded', ()=>{
+            loadData();
+            renderCalendar();
+            renderTemplatesPanel();
+            renderWeeklyPanel();
+            updateCycleIndicator();
+            
+            document.querySelectorAll('.tab').forEach(t=> t.addEventListener('click', ()=>{
+                document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+                document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+                t.classList.add('active');
+                const id = t.dataset.tab==='calendar'?'calendar-panel':(t.dataset.tab==='workout'?'workout-panel':(t.dataset.tab==='weekly'?'weekly-panel':(t.dataset.tab==='templates'?'templates-panel':(t.dataset.tab==='future'?'future-panel':'progress-panel'))));
+                document.getElementById(id).classList.add('active');
+                if(t.dataset.tab==='progress') { populateProgressSelect(); renderWeeklyVolumeChart(); }
+                if(t.dataset.tab==='templates') renderTemplatesPanel();
+                if(t.dataset.tab==='weekly') renderWeeklyPanel();
+                if(t.dataset.tab==='workout') renderWorkoutPanel();
+                if(t.dataset.tab==='future') renderFuturePlan();
+            }));
+            
+            document.getElementById('prev-month').addEventListener('click', ()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
+            document.getElementById('next-month').addEventListener('click', ()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
+            document.getElementById('sync-calendar-from-weekly').addEventListener('click', syncCalendarFromWeeklyPlan);
+            document.getElementById('refresh-from-weekly-btn').addEventListener('click', ()=>{
+                const dateStr = formatDate(selectedDate);
+                const existing = workouts[dateStr];
+                if(existing && existing.completed) {
+                    if(!confirm('Trening wykonany. Nadpisać?')) return;
+                }
+                const deloadCheck = document.getElementById('deload-checkbox').checked;
+                workouts[dateStr] = generateWorkoutFromWeeklyPlan(selectedDate, deloadCheck);
+                saveData();
+                renderWorkoutPanel();
+                renderCalendar();
+            });
+            document.getElementById('generate-future-plan').addEventListener('click', generateFutureFourWeeks);
+            document.getElementById('disposition-slider').addEventListener('input', (e)=>{
+                currentDisposition = e.target.value/100;
+                document.getElementById('disposition-value').textContent = e.target.value+'%';
+                if(workouts[formatDate(selectedDate)]?.type==='strength') renderWorkoutPanel();
+            });
+            document.getElementById('add-exercise-btn').addEventListener('click', ()=> document.getElementById('add-exercise-form').style.display='block');
+            document.querySelectorAll('.preset').forEach(p=> p.addEventListener('click', ()=> addExercise(p.dataset.preset)));
+            document.getElementById('add-custom-exercise').addEventListener('click', ()=>{
+                const n = document.getElementById('custom-exercise-name').value.trim();
+                if(n) addExercise(n);
+            });
+            function addExercise(name) {
+                const d = formatDate(selectedDate);
+                if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, completed: false };
+                workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedReps:8, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20}) });
+                renderWorkoutPanel(); saveData();
+                document.getElementById('add-exercise-form').style.display='none';
+                document.getElementById('custom-exercise-name').value='';
+            }
+            
+            // Szablony
+            document.getElementById('create-template-btn').addEventListener('click', ()=>{
+                document.getElementById('template-form-title').textContent = 'Nowy szablon';
+                document.getElementById('edit-template-id').value = '';
+                document.getElementById('template-name').value = '';
+                document.getElementById('template-progress-percent').value = 5;
+                document.getElementById('template-progress-sessions').value = 3;
+                renderTemplateExercisesTable([]);
+                document.getElementById('template-form').style.display = 'block';
+            });
+            document.getElementById('add-exercise-to-template').addEventListener('click', ()=>{
+                const tbody = document.querySelector('#template-exercises-table tbody');
+                const row = document.createElement('tr');
+                row.innerHTML = `<td><input type="text" class="tpl-ex-name" value="Nowe"></td><td><input type="number" class="tpl-ex-sets" value="3" min="1"></td><td><input type="number" class="tpl-ex-reps" value="8"></td><td><input type="number" class="tpl-ex-weight" value="20" step="0.5"></td><td><button class="btn btn-sm remove-tpl-ex">🗑️</button> <button class="btn btn-sm edit-series-tpl">✏️ Serie</button></td>`;
+                tbody.appendChild(row);
+                row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> row.remove());
+                row.querySelector('.edit-series-tpl').addEventListener('click', ()=> {
+                    const idx = Array.from(tbody.children).indexOf(row);
+                    const name = row.querySelector('.tpl-ex-name').value;
+                    const sets = parseInt(row.querySelector('.tpl-ex-sets').value);
+                    const reps = parseInt(row.querySelector('.tpl-ex-reps').value);
+                    const weight = parseFloat(row.querySelector('.tpl-ex-weight').value);
+                    openTemplateSeriesEditorForNew({ name, sets, reps, startWeight: weight, series: null }, row);
+                });
+            });
+            function openTemplateSeriesEditorForNew(ex, row) {
+                const sets = ex.series || Array(ex.sets).fill({reps: ex.reps, weight: ex.startWeight});
+                let html = `<h4>${ex.name}</h4>`;
+                sets.forEach((s,i)=> html+=`<div>Seria ${i+1}: <input id="tpl-new-s-${i}-r" value="${s.reps}" style="width:60px"> x <input id="tpl-new-s-${i}-w" value="${s.weight}" style="width:70px"> kg</div>`);
+                html += `<button id="save-tpl-new-series" class="btn btn-primary">Zapisz</button>`;
+                const modal = document.createElement('div'); 
+                modal.style.cssText='position:fixed;top:20%;left:5%;right:5%;background:#fff;padding:24px;border-radius:24px;z-index:1000;';
+                modal.innerHTML = html; 
+                document.body.appendChild(modal);
+                document.getElementById('save-tpl-new-series').onclick = ()=>{
+                    const newSeries = [];
+                    for(let i=0;i<sets.length;i++) {
+                        newSeries.push({
+                            reps: +document.getElementById(`tpl-new-s-${i}-r`).value,
+                            weight: +document.getElementById(`tpl-new-s-${i}-w`).value
+                        });
+                    }
+                    ex.series = newSeries;
+                    modal.remove();
+                };
+            }
+            document.getElementById('save-template-btn').addEventListener('click', ()=>{
+                const id = document.getElementById('edit-template-id').value || 'tpl_'+Date.now();
+                const name = document.getElementById('template-name').value;
+                const perc = parseFloat(document.getElementById('template-progress-percent').value);
+                const sess = parseInt(document.getElementById('template-progress-sessions').value);
+                const exs = getTemplateExercisesFromForm();
+                if(!name || exs.length===0) return alert('Wprowadź nazwę i ćwiczenia.');
+                const tpl = { id, name, progressionPercent: perc, progressionSessions: sess, exercises: exs };
+                const idx = templates.findIndex(t=>t.id===id);
+                if(idx>=0) templates[idx] = tpl; else templates.push(tpl);
+                saveData(); renderTemplatesPanel(); renderWeeklyPanel();
+                document.getElementById('template-form').style.display = 'none';
+            });
+            document.getElementById('cancel-template-btn').addEventListener('click', ()=> document.getElementById('template-form').style.display='none');
+            document.getElementById('progress-exercise-select').addEventListener('change', (e)=> renderProgressChart(e.target.value));
+            document.getElementById('export-txt-btn').addEventListener('click', exportToTxt);
+        });
+    })();
+</script>
+</body>
+</html>
