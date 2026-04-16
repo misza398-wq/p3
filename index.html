@@ -3,44 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>💪 Cykl PRO – ręczny deload + progresja (fix)</title>
+    <title>💪 Cykl PRO – kompletny</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
+        * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; }
         body { background: #f5f7fa; padding: 12px 8px; color: #1e293b; }
         .app { max-width: 1300px; margin: 0 auto; }
-        h1 { font-weight: 600; font-size: 1.7rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .tabs { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; flex-wrap: wrap; }
-        .tab { padding: 8px 14px; background: white; border-radius: 30px; font-weight: 500; cursor: pointer; border: 1px solid #cbd5e1; font-size: 0.9rem; white-space: nowrap; }
-        .tab.active { background: #0f172a; color: white; border-color: #0f172a; }
-        .panel { display: none; background: white; border-radius: 20px; padding: 18px 14px; box-shadow: 0 6px 16px rgba(0,0,0,0.03); border: 1px solid #eef2f6; margin-bottom: 16px; }
+        h1 { font-size: 1.7rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .user-stats { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; background: white; padding: 10px 16px; border-radius: 40px; }
+        .tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 8px 14px; background: white; border-radius: 30px; cursor: pointer; border: 1px solid #cbd5e1; }
+        .tab.active { background: #0f172a; color: white; }
+        .panel { display: none; background: white; border-radius: 20px; padding: 18px 14px; margin-bottom: 16px; }
         .panel.active { display: block; }
-        .btn { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 40px; font-weight: 500; cursor: pointer; transition: 0.1s; font-size: 0.9rem; }
+        .btn { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 40px; cursor: pointer; }
         .btn-primary { background: #0f172a; color: white; border: none; }
-        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
-        input, select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 30px; background: white; font-size: 0.9rem; }
+        .btn-warning { background: #dc3545; color: white; border: none; }
         .editable { background: transparent; border: none; padding: 4px 6px; border-radius: 8px; width: 70px; text-align: center; }
-        .editable:focus { outline: 2px solid #3b82f6; background: white; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        th { text-align: left; padding: 10px 6px; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-        td { padding: 10px 6px; border-bottom: 1px solid #edf2f7; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 6px; border-bottom: 1px solid #edf2f7; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
-        .day-cell { aspect-ratio: 1/1; background: #fafbfc; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #eef2f6; position: relative; font-size: 0.9rem; }
+        .day-cell { aspect-ratio: 1/1; background: #fafbfc; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
         .day-cell.today { border: 2px solid #0f172a; }
         .day-cell.selected { background: #0f172a; color: white; }
-        .day-cell.has-workout::after { content: "•"; color: #3b82f6; font-size: 22px; position: absolute; bottom: 1px; }
-        .day-cell.selected.has-workout::after { color: white; }
-        .chart-container { height: 260px; margin-top: 16px; }
-        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px 14px; border-radius: 12px; margin-bottom: 16px; }
-        .plate-icon { cursor: pointer; margin-left: 4px; }
-        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .day-cell .status-dot { position: absolute; bottom: 4px; width: 8px; height: 8px; border-radius: 50%; }
+        .status-planned .status-dot { background: #3b82f6; }
+        .status-completed .status-dot { background: #10b981; }
+        .status-skipped .status-dot { background: #ef4444; }
+        .day-cell.selected .status-dot { background: white; }
+        .table-responsive { overflow-x: auto; }
         .clickable-row { cursor: pointer; }
-        .clickable-row:hover { background: #f1f5f9; }
+        .rpe-badge { background: #e9ecef; border-radius: 20px; padding: 2px 8px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 <div class="app">
-    <h1>📆 Cykl PRO <span style="font-size:0.8rem; background:#e6edf5; padding:4px 10px; border-radius:40px;" id="cycle-indicator">Mezocykl 1 • Tydzień 2/4</span></h1>
+    <h1>📆 Cykl PRO <span id="cycle-indicator" style="font-size:0.8rem; background:#e6edf5; padding:4px 10px; border-radius:40px;">Mezocykl 1 • Tydzień 2/4</span></h1>
+    
+    <div class="user-stats">
+        <label>📏 Wzrost (cm): <input id="user-height" type="number" min="100" max="250" value="175" style="width:80px;"></label>
+        <label>⚖️ Waga (kg): <input id="user-weight" type="number" min="30" max="300" value="70" style="width:80px;"></label>
+        <span>📊 BMI: <strong id="bmi-display">22.9</strong></span>
+        <span style="margin-left:auto;">❤️ Tętno spocz.: <input id="resting-hr" type="number" min="40" max="100" value="60" style="width:70px;"></span>
+    </div>
     
     <div class="tabs">
         <div class="tab active" data-tab="calendar">📅 Kalendarz</div>
@@ -49,6 +54,7 @@
         <div class="tab" data-tab="templates">📋 Szablony</div>
         <div class="tab" data-tab="future">📅 Cykl 4-tyg.</div>
         <div class="tab" data-tab="progress">📈 Progres</div>
+        <div class="tab" data-tab="records">🏆 Rekordy</div>
     </div>
 
     <!-- PANEL KALENDARZA -->
@@ -58,29 +64,32 @@
             <h3 id="month-year">Kwiecień 2026</h3>
             <button class="btn" id="next-month">→</button>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; color:#64748b; margin-bottom:6px;">
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; color:#64748b;">
             <span>Pn</span><span>Wt</span><span>Śr</span><span>Cz</span><span>Pt</span><span>So</span><span>Nd</span>
         </div>
         <div id="days-container" class="calendar-grid"></div>
         <div style="margin-top:18px;">
             <button class="btn btn-primary" id="sync-calendar-from-weekly">🔄 Aktualizuj miesiąc z planu</button>
         </div>
+        <div style="margin-top:10px; display:flex; gap:15px;">
+            <span><span style="background:#3b82f6; display:inline-block; width:12px; height:12px; border-radius:50%;"></span> Zaplanowany</span>
+            <span><span style="background:#10b981; display:inline-block; width:12px; height:12px; border-radius:50%;"></span> Wykonany</span>
+            <span><span style="background:#ef4444; display:inline-block; width:12px; height:12px; border-radius:50%;"></span> Pominięty</span>
+        </div>
     </div>
 
     <!-- PANEL TRENINGU DNIA -->
     <div id="workout-panel" class="panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom:12px;">
             <h2 id="selected-date-title">15 kwietnia 2026</h2>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <button class="btn btn-primary" id="save-workout-btn">✔ Zapisz</button>
+            <div style="display:flex; gap:6px;">
+                <button class="btn btn-primary" id="complete-workout-btn">✔ Wykonany – zapisz</button>
+                <button class="btn btn-warning" id="skip-workout-btn">🚫 Pomiń</button>
                 <button class="btn" id="export-txt-btn">📄 TXT</button>
                 <button class="btn" id="refresh-from-weekly-btn">⟲ Odśwież</button>
             </div>
         </div>
-        <div style="margin-bottom:14px;">
-            <label><input type="checkbox" id="deload-checkbox"> 🌿 Deload (ciężar -10%, nie liczy progresji)</label>
-        </div>
-        <div id="cns-warning" class="warning-box" style="display:none;"></div>
+        <label style="margin-bottom:14px;"><input type="checkbox" id="deload-checkbox"> 🌿 Deload (-10% ciężaru, bez progresji)</label>
         
         <div id="disposition-slider-container" style="margin-bottom:16px; background:#f1f5f9; padding:10px 16px; border-radius:40px;">
             <div style="display:flex; align-items:center; gap:12px;">
@@ -94,11 +103,12 @@
             <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; background:#f8fafc; padding:12px; border-radius:20px;">
                 <span>🎯 Cel: <strong id="progression-goal">+5%</strong></span>
                 <span>📊 Plan. tonaż: <strong id="planned-tonnage">0</strong> kg</span>
-                <span>✅ <span id="completion-status">Nie wykonano</span></span>
+                <span>✅ Status: <strong id="completion-status">Zaplanowano</strong></span>
             </div>
+            <div id="exercise-insights"></div>
             <div class="table-responsive">
                 <table>
-                    <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Powt.</th><th>Ciężar</th><th>Objętość</th><th></th></tr></thead>
+                    <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Powt.</th><th>Ciężar</th><th>Objętość</th><th>RPE</th><th></th></tr></thead>
                     <tbody id="exercises-tbody"></tbody>
                 </table>
             </div>
@@ -121,9 +131,10 @@
         
         <div id="cardio-view" style="display:none;">
             <div style="display:flex; gap:20px; margin-top:16px; flex-wrap:wrap;">
-                <label>⏱️ Czas (min): <input type="number" id="cardio-duration" min="1" value="30" style="width:90px;"></label>
-                <label>❤️ Tętno: <input type="number" id="cardio-hr" min="40" max="220" value="140" style="width:90px;"></label>
+                <label>⏱️ Czas (min): <input type="number" id="cardio-duration" min="1" value="30"></label>
+                <label>❤️ Tętno: <input type="number" id="cardio-hr" min="40" max="220" value="140"></label>
             </div>
+            <div id="load-score-display" style="margin-top:12px; font-weight:500;"></div>
         </div>
     </div>
 
@@ -137,7 +148,7 @@
 
     <!-- PANEL SZABLONÓW -->
     <div id="templates-panel" class="panel">
-        <div style="display:flex; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
             <h3>📋 Szablony</h3>
             <button class="btn btn-primary" id="create-template-btn">➕ Nowy szablon</button>
         </div>
@@ -145,15 +156,15 @@
         <div id="template-form" style="display:none; margin-top:16px; background:#f1f5f9; padding:16px; border-radius:20px;">
             <h4 id="template-form-title">Nowy szablon</h4>
             <input type="hidden" id="edit-template-id">
-            <label>Nazwa: <input type="text" id="template-name" placeholder="np. Push A" style="width:180px;"></label>
+            <label>Nazwa: <input type="text" id="template-name" style="width:180px;"></label>
             <div style="margin:12px 0;">
-                <label>Progresja: +<input type="number" id="template-progress-percent" value="5" min="0" max="20" step="0.5" style="width:70px;">% 
+                <label>Domyślna progresja: +<input type="number" id="template-progress-percent" value="5" min="0" max="20" step="0.5" style="width:70px;">% 
                 co <input type="number" id="template-progress-sessions" value="3" min="1" style="width:70px;"> treningi</label>
             </div>
             <h5>Ćwiczenia</h5>
             <div class="table-responsive">
                 <table id="template-exercises-table">
-                    <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Powt.</th><th>Start</th><th></th></tr></thead>
+                    <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Powt.</th><th>Start</th><th>Progresja</th><th></th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -168,7 +179,7 @@
     <!-- PANEL CYKLU 4-TYGODNIOWEGO -->
     <div id="future-panel" class="panel">
         <h3>📅 Plan na 4 tygodnie</h3>
-        <p>Generuje treningi od wybranej daty z progresją. Nie nadpisuje wykonanych. Deload tylko ręcznie.</p>
+        <p>Generuje od dziś kolejne 4 tygodnie z progresją. Nie nadpisuje wykonanych/pominiętych.</p>
         <button class="btn btn-primary" id="generate-future-plan">🔄 Generuj plan</button>
         <div id="future-plan-container" style="margin-top:18px; overflow-x:auto;"></div>
     </div>
@@ -181,6 +192,14 @@
         <h3 style="margin-top:30px;">📅 Tonaż tygodniowy</h3>
         <div class="chart-container"><canvas id="weekly-volume-chart"></canvas></div>
     </div>
+
+    <!-- PANEL REKORDÓW -->
+    <div id="records-panel" class="panel">
+        <h3>🏆 Osobiste rekordy (1RM)</h3>
+        <p style="margin-bottom:16px;">Wpisz swój najlepszy ciężar dla każdego ćwiczenia.</p>
+        <div id="records-container" style="display:grid; gap:12px;"></div>
+        <button class="btn btn-primary" id="save-records-btn">💾 Zapisz rekordy</button>
+    </div>
 </div>
 
 <script>
@@ -189,19 +208,25 @@
         // ---------- STAN ----------
         let currentDate = new Date(2026, 3, 15);
         let selectedDate = new Date(currentDate);
-        let workouts = {};                
+        let workouts = {};                // status: 'planned', 'completed', 'skipped'
         let exerciseHistory = {};         
         let weeklyTemplate = { 1:'strength', 2:'run', 3:'strength', 4:'home', 5:'strength', 6:'run', 0:'rest' };
         let templateAssignments = {};      
         let templates = [];               
-        let templateUsageCount = {};      // licznik TYLKO wykonanych, nie-deload treningów
+        let templateUsageCount = {};      
         
         let currentDisposition = 1.0;
         let progressChart = null, weeklyChart = null;
         
+        // Nowe zmienne
+        let userHeight = 175;
+        let userWeight = 70;
+        let restingHR = 60;
+        let personalRecords = {};
+        
         // ---------- LOCALSTORAGE ----------
         function loadData() {
-            const saved = localStorage.getItem('cykl_app_data');
+            const saved = localStorage.getItem('cykl_pro_full');
             if(saved) {
                 try {
                     const data = JSON.parse(saved);
@@ -211,45 +236,54 @@
                     templateAssignments = data.templateAssignments || {};
                     templates = data.templates || [];
                     templateUsageCount = data.templateUsageCount || {};
-                    Object.values(workouts).forEach(w => { if (w.completed === undefined) w.completed = false; });
+                    userHeight = data.userHeight || 175;
+                    userWeight = data.userWeight || 70;
+                    restingHR = data.restingHR || 60;
+                    personalRecords = data.personalRecords || {};
+                    Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; delete w.completed; });
                 } catch(e){}
             }
             if(templates.length === 0) createDefaultTemplates();
             if(Object.keys(workouts).length === 0) generateDemoData();
+            // Aktualizuj UI pól użytkownika
+            document.getElementById('user-height').value = userHeight;
+            document.getElementById('user-weight').value = userWeight;
+            document.getElementById('resting-hr').value = restingHR;
+            updateBMI();
         }
         function saveData() {
-            localStorage.setItem('cykl_app_data', JSON.stringify({
-                workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, templateUsageCount
+            localStorage.setItem('cykl_pro_full', JSON.stringify({
+                workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, templateUsageCount,
+                userHeight, userWeight, restingHR, personalRecords
             }));
         }
         function createDefaultTemplates() {
             templates.push({
                 id: 'tpl1', name: 'Push A', progressionPercent: 5, progressionSessions: 3,
                 exercises: [
-                    { name: 'Wyciskanie sztangi leżąc', sets: 4, reps: 8, startWeight: 80 },
-                    { name: 'Wyciskanie hantli skos', sets: 3, reps: 10, startWeight: 28 }
+                    { name: 'Wyciskanie sztangi leżąc', sets: 4, reps: 8, startWeight: 80, progressionPercent: null, progressionSessions: null },
+                    { name: 'Wyciskanie hantli skos', sets: 3, reps: 10, startWeight: 28, progressionPercent: null, progressionSessions: null }
                 ]
             });
             templates.push({
                 id: 'tpl2', name: 'Pull A', progressionPercent: 5, progressionSessions: 3,
                 exercises: [
-                    { name: 'Wiosłowanie sztangą', sets: 4, reps: 8, startWeight: 70 },
-                    { name: 'Uginanie ramion ze sztangą', sets: 3, reps: 12, startWeight: 30 }
+                    { name: 'Wiosłowanie sztangą', sets: 4, reps: 8, startWeight: 70, progressionPercent: null, progressionSessions: null },
+                    { name: 'Uginanie ramion ze sztangą', sets: 3, reps: 12, startWeight: 30, progressionPercent: null, progressionSessions: null }
                 ]
             });
             templateUsageCount = { 'tpl1': 2, 'tpl2': 1 };
             saveData();
         }
         function generateDemoData() {
-            const d1 = '2026-04-08', d2 = '2026-04-10', d3 = '2026-04-12', d4 = '2026-04-14';
-            workouts[d1] = { type:'strength', deload:false, templateId:'tpl1', completed: true, exercises:[
-                { id:'b1', name:'Wyciskanie sztangi leżąc', sets:4, plannedReps:8, plannedWeight:80, actualSets:[{reps:8,w:80},{reps:8,w:80},{reps:7,w:80},{reps:7,w:80}] }
+            const d1 = '2026-04-08', d2 = '2026-04-10', d3 = '2026-04-12';
+            workouts[d1] = { type:'strength', deload:false, templateId:'tpl1', status:'completed', exercises:[
+                { id:'b1', name:'Wyciskanie sztangi leżąc', sets:4, plannedReps:8, plannedWeight:80, actualSets:[{reps:8,w:80,rpe:7},{reps:8,w:80,rpe:7.5},{reps:7,w:80,rpe:8},{reps:7,w:80,rpe:8.5}] }
             ]};
-            workouts[d2] = { type:'strength', deload:false, templateId:'tpl2', completed: true, exercises:[
-                { id:'b2', name:'Wiosłowanie sztangą', sets:4, plannedReps:8, plannedWeight:70, actualSets:[{reps:8,w:70},{reps:8,w:70},{reps:8,w:70},{reps:6,w:70}] }
+            workouts[d2] = { type:'strength', deload:false, templateId:'tpl2', status:'completed', exercises:[
+                { id:'b2', name:'Wiosłowanie sztangą', sets:4, plannedReps:8, plannedWeight:70, actualSets:[{reps:8,w:70,rpe:6},{reps:8,w:70,rpe:7},{reps:8,w:70,rpe:7},{reps:6,w:70,rpe:9}] }
             ]};
-            workouts[d3] = { type:'run', duration:40*60, avgHr:155, completed: false };
-            workouts[d4] = { type:'run', duration:50*60, avgHr:148, completed: false };
+            workouts[d3] = { type:'run', duration:40*60, avgHr:155, status:'completed', loadScore: (40) * (155 - 60) };
             Object.keys(workouts).forEach(d => { if(workouts[d].type==='strength') updateHistoryFromWorkout(new Date(d)); });
             saveData();
         }
@@ -272,8 +306,13 @@
             document.getElementById('cycle-indicator').innerHTML = `Mezocykl 1 • Tydzień ${micro}/4`;
             return micro;
         }
+        function updateBMI() {
+            const h = userHeight / 100;
+            const bmi = (userWeight / (h * h)).toFixed(1);
+            document.getElementById('bmi-display').textContent = bmi;
+        }
 
-        // ---------- KALENDARZ ----------
+        // ---------- KALENDARZ (bez wstecznych treningów) ----------
         function renderCalendar() {
             const year = currentDate.getFullYear(), month = currentDate.getMonth();
             const firstDay = new Date(year, month, 1);
@@ -283,17 +322,38 @@
             const grid = document.getElementById('days-container');
             grid.innerHTML = '';
             const todayStr = formatDate(new Date()), selectedStr = formatDate(selectedDate);
+            const today = new Date(); today.setHours(0,0,0,0);
+            
             for(let i=0; i<42; i++) {
                 const cellDate = new Date(startDate); cellDate.setDate(startDate.getDate() + i);
                 const dateStr = formatDate(cellDate);
-                const hasWorkout = !!workouts[dateStr];
+                
+                // Pokaż kropkę tylko jeśli trening istnieje i data jest >= dzisiaj lub trening ma status inny niż planned
+                const w = workouts[dateStr];
+                let status = null;
+                if (w) {
+                    // Jeśli trening jest w przeszłości i ma status planned, ukryj go (chyba że to dzisiaj)
+                    if (cellDate < today && w.status === 'planned' && dateStr !== todayStr) {
+                        status = null; // nie pokazuj kropki
+                    } else {
+                        status = w.status;
+                    }
+                }
+                
                 const cell = document.createElement('div');
                 cell.className = 'day-cell';
+                if (status) cell.classList.add(`status-${status}`);
                 if(dateStr === todayStr) cell.classList.add('today');
                 if(dateStr === selectedStr) cell.classList.add('selected');
-                if(hasWorkout) cell.classList.add('has-workout');
                 if(cellDate.getMonth() !== month) cell.style.opacity = '0.5';
                 cell.textContent = cellDate.getDate();
+                
+                if (status) {
+                    const dot = document.createElement('span');
+                    dot.className = 'status-dot';
+                    cell.appendChild(dot);
+                }
+                
                 cell.addEventListener('click', ()=>{
                     selectedDate = new Date(cellDate);
                     renderCalendar();
@@ -309,172 +369,119 @@
         function generateWorkoutFromWeeklyPlan(date, usageCounts = null) {
             const dayOfWeek = date.getDay();
             const type = weeklyTemplate[dayOfWeek] || 'rest';
-            const isDeload = false; // nigdy automatyczny
-            
             if(type === 'strength') {
                 const tplId = templateAssignments[dayOfWeek];
                 if(tplId) {
                     const tpl = templates.find(t => t.id === tplId);
                     if(tpl) {
-                        const baseUsage = (usageCounts ? usageCounts[tplId] : templateUsageCount[tplId]) || 0;
-                        const increaseCount = Math.floor(baseUsage / tpl.progressionSessions);
+                        const baseUsage = (usageCounts && usageCounts[tplId] !== undefined) ? usageCounts[tplId] : (templateUsageCount[tplId] || 0);
                         const exercises = tpl.exercises.map((ex, idx) => {
+                            const progPerc = ex.progressionPercent ?? tpl.progressionPercent;
+                            const progSess = ex.progressionSessions ?? tpl.progressionSessions;
+                            const increaseCount = Math.floor(baseUsage / progSess);
                             let weight = ex.startWeight;
-                            for(let i=0; i<increaseCount; i++) weight *= (1 + tpl.progressionPercent/100);
+                            for(let i=0; i<increaseCount; i++) weight *= (1 + progPerc/100);
                             weight = Math.round(weight / 2.5) * 2.5;
-                            
                             return {
                                 id: ex.name+Date.now()+idx+Math.random(),
                                 name: ex.name,
                                 sets: ex.sets,
                                 plannedReps: ex.reps,
                                 plannedWeight: weight,
-                                actualSets: Array(ex.sets).fill().map(() => ({ reps: ex.reps, w: weight })),
-                                templateExercise: true // oznaczenie, że pochodzi z szablonu
+                                actualSets: Array(ex.sets).fill().map(() => ({ reps: ex.reps, w: weight, rpe: 8 })),
+                                templateExercise: true
                             };
                         });
-                        return { type:'strength', deload: false, templateId: tplId, exercises, completed: false };
+                        return { type:'strength', deload: false, templateId: tplId, exercises, status: 'planned' };
                     }
                 }
-                return { type:'strength', exercises: [], deload: false, completed: false };
+                return { type:'strength', exercises: [], deload: false, status: 'planned' };
             } else if(type !== 'rest') {
-                return { type, duration: (type==='run'?30:45)*60, avgHr: 140, completed: false };
+                const duration = (type==='run'?30:45)*60;
+                const avgHr = 140;
+                const loadScore = (duration/60) * (avgHr - restingHR);
+                return { type, duration, avgHr, loadScore, status: 'planned' };
             }
-            return { type:'rest', completed: false };
-        }
-
-        // ---------- AKTUALIZACJA CIĘŻARÓW W ĆWICZENIACH Z SZABLONU ----------
-        function recalcTemplateExercises(workout) {
-            if (!workout || workout.type !== 'strength' || !workout.templateId) return;
-            const tpl = templates.find(t => t.id === workout.templateId);
-            if (!tpl) return;
-            const usage = templateUsageCount[workout.templateId] || 0;
-            const increaseCount = Math.floor(usage / tpl.progressionSessions);
-            
-            workout.exercises.forEach(ex => {
-                if (ex.templateExercise) {
-                    // znajdź odpowiadające ćwiczenie w szablonie po nazwie
-                    const tplEx = tpl.exercises.find(te => te.name === ex.name);
-                    if (tplEx) {
-                        let weight = tplEx.startWeight;
-                        for(let i=0; i<increaseCount; i++) weight *= (1 + tpl.progressionPercent/100);
-                        weight = Math.round(weight / 2.5) * 2.5;
-                        ex.plannedWeight = weight;
-                        // nie zmieniamy actualSets – zostają historyczne lub domyślne
-                    }
-                }
-            });
+            return { type:'rest', status: 'planned' };
         }
 
         // ---------- GENEROWANIE 4 TYGODNI ----------
         function generateFutureFourWeeks() {
-            const start = new Date(selectedDate);
-            start.setHours(0,0,0,0);
+            const startDate = new Date(currentDate);
+            startDate.setHours(0,0,0,0);
             let simulatedUsage = { ...templateUsageCount };
-            
             for(let i=0; i<28; i++) {
-                const d = new Date(start);
-                d.setDate(start.getDate() + i);
+                const d = new Date(startDate);
+                d.setDate(startDate.getDate() + i);
                 const dateStr = formatDate(d);
                 const existing = workouts[dateStr];
-                if(!existing || !existing.completed) {
-                    const dayOfWeek = d.getDay();
-                    const type = weeklyTemplate[dayOfWeek] || 'rest';
-                    
-                    if(type === 'strength') {
-                        const tplId = templateAssignments[dayOfWeek];
-                        if(tplId) {
-                            const tpl = templates.find(t => t.id === tplId);
-                            if(tpl) {
-                                const usage = simulatedUsage[tplId] || 0;
-                                const increaseCount = Math.floor(usage / tpl.progressionSessions);
-                                const exercises = tpl.exercises.map((ex, idx) => {
-                                    let weight = ex.startWeight;
-                                    for(let j=0; j<increaseCount; j++) weight *= (1 + tpl.progressionPercent/100);
-                                    weight = Math.round(weight / 2.5) * 2.5;
-                                    
-                                    return {
-                                        id: ex.name+Date.now()+idx+i,
-                                        name: ex.name,
-                                        sets: ex.sets,
-                                        plannedReps: ex.reps,
-                                        plannedWeight: weight,
-                                        actualSets: Array(ex.sets).fill().map(() => ({ reps: ex.reps, w: weight })),
-                                        templateExercise: true
-                                    };
-                                });
-                                workouts[dateStr] = { type:'strength', deload: false, templateId: tplId, exercises, completed: false };
-                                simulatedUsage[tplId] = (simulatedUsage[tplId] || 0) + 1;
-                                continue;
-                            }
-                        }
-                        workouts[dateStr] = { type:'strength', exercises: [], deload: false, completed: false };
-                    } else if(type !== 'rest') {
-                        workouts[dateStr] = { type, duration: (type==='run'?30:45)*60, avgHr: 140, completed: false };
-                    } else {
-                        workouts[dateStr] = { type:'rest', completed: false };
+                if (!existing || existing.status === 'planned') {
+                    workouts[dateStr] = generateWorkoutFromWeeklyPlan(d, simulatedUsage);
+                    const workout = workouts[dateStr];
+                    if (workout.type === 'strength' && workout.templateId) {
+                        simulatedUsage[workout.templateId] = (simulatedUsage[workout.templateId] || 0) + 1;
                     }
                 }
             }
             saveData();
             renderCalendar();
             renderFuturePlan();
-            alert('✅ Wygenerowano plan na 4 tygodnie. Deload włączaj ręcznie.');
+            alert('✅ Wygenerowano plan na 4 tygodnie od dziś z progresją.');
         }
-
-        // ---------- SYNCHRONIZACJA MIESIĄCA ----------
-        function syncCalendarFromWeeklyPlan() {
-            const year = currentDate.getFullYear(), month = currentDate.getMonth();
-            const daysInMonth = new Date(year, month+1, 0).getDate();
-            for(let d=1; d<=daysInMonth; d++) {
-                const date = new Date(year, month, d);
-                const dateStr = formatDate(date);
-                const existing = workouts[dateStr];
-                if(!existing || !existing.completed) {
-                    workouts[dateStr] = generateWorkoutFromWeeklyPlan(date);
-                }
+        function renderFuturePlan() {
+            const container = document.getElementById('future-plan-container');
+            const start = new Date(currentDate);
+            let html = '<table style="min-width:700px;"><tr><th>Data</th><th>Dzień</th><th>Typ</th><th>Opis</th><th>Status</th></tr>';
+            for(let i=0; i<28; i++) {
+                const d = new Date(start); d.setDate(start.getDate()+i);
+                const dateStr = formatDate(d);
+                const w = workouts[dateStr] || generateWorkoutFromWeeklyPlan(d);
+                const desc = w.type==='strength' ? (w.exercises?.map(e=>`${e.name} ${e.plannedWeight}kg`).join(', ')||'Brak') : (w.type==='run'?'Bieg':w.type==='home'?'Dom':'Odpoczynek');
+                const statusIcon = { planned: '🔵', completed: '🟢', skipped: '🔴' }[w.status] || '⚪';
+                html += `<tr class="clickable-row" data-date="${dateStr}">
+                    <td>${dateStr}</td><td>${['Nd','Pn','Wt','Śr','Cz','Pt','So'][d.getDay()]}</td><td>${w.type}</td><td>${desc}</td>
+                    <td>${statusIcon} ${w.status}</td>
+                </tr>`;
             }
-            saveData();
-            renderCalendar();
-            alert('✅ Miesiąc zaktualizowany.');
+            html += '</table>';
+            container.innerHTML = html;
+            container.querySelectorAll('.clickable-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    selectedDate = new Date(row.dataset.date + 'T12:00:00');
+                    renderCalendar();
+                    document.querySelector('[data-tab="workout"]').click();
+                    renderWorkoutPanel();
+                });
+            });
         }
 
-        // ---------- PANEL TRENINGU (z przeliczaniem progresji) ----------
+        // ---------- PANEL TRENINGU ----------
         function renderWorkoutPanel() {
             const dateStr = formatDate(selectedDate);
             let workout = workouts[dateStr];
-            
-            // Jeśli nie istnieje, generujemy nowy
             if (!workout) {
                 workout = generateWorkoutFromWeeklyPlan(selectedDate);
                 workouts[dateStr] = workout;
                 saveData();
-            } 
-            // Jeśli istnieje, nie jest wykonany i ma templateId – przeliczamy ciężary z szablonu
-            else if (!workout.completed && workout.type === 'strength' && workout.templateId) {
-                recalcTemplateExercises(workout);
-                saveData(); // zapisz przeliczone ciężary
             }
-            
             document.getElementById('selected-date-title').textContent = new Intl.DateTimeFormat('pl', {day:'numeric', month:'long', year:'numeric'}).format(selectedDate);
             document.getElementById('deload-checkbox').checked = workout.deload || false;
-            document.getElementById('completion-status').textContent = workout.completed ? '✅ Wykonano' : '⏳ Zaplanowano';
-            
+            const statusText = { planned: '📅 Zaplanowano', completed: '✅ Wykonano', skipped: '❌ Pominięto' };
+            document.getElementById('completion-status').textContent = statusText[workout.status] || 'Zaplanowano';
             toggleWorkoutView(workout.type);
             if(workout.type === 'strength') {
                 renderStrengthExercises(workout.exercises);
             } else if(workout.type === 'run' || workout.type === 'home') {
                 document.getElementById('cardio-duration').value = workout.duration ? Math.round(workout.duration/60) : 30;
                 document.getElementById('cardio-hr').value = workout.avgHr || 140;
+                const loadScore = workout.loadScore || ((workout.duration/60) * (workout.avgHr - restingHR));
+                document.getElementById('load-score-display').textContent = `📊 Obciążenie: ${Math.round(loadScore)} pkt`;
             }
-            const tpl = templates[0];
-            document.getElementById('progression-goal').textContent = `+${tpl?.progressionPercent || 5}%`;
             updateCycleIndicator();
         }
         function toggleWorkoutView(type) {
             document.getElementById('strength-view').style.display = type==='strength'?'block':'none';
             document.getElementById('cardio-view').style.display = (type==='run' || type==='home')?'block':'none';
-            document.getElementById('disposition-slider-container').style.display = type==='strength'?'block':'none';
         }
         function renderStrengthExercises(exercises) {
             const tbody = document.getElementById('exercises-tbody');
@@ -490,20 +497,27 @@
                 const scaledWeight = Math.round(baseWeight * currentDisposition * deloadMult * 2) / 2;
                 const reps = ex.plannedReps || 8;
                 plannedTonnage += scaledWeight * reps * sets;
-                let volume = 0;
-                if(ex.actualSets) ex.actualSets.forEach(s => volume += s.w * s.reps);
+                let volume = 0, avgRpe = null;
+                if(ex.actualSets) {
+                    ex.actualSets.forEach(s => volume += s.w * s.reps);
+                    const rpes = ex.actualSets.map(s => s.rpe).filter(r => r != null);
+                    if(rpes.length) avgRpe = (rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1);
+                }
+                const record = personalRecords[ex.name];
+                const recordDisplay = record ? ` <span style="font-size:0.8rem; color:#64748b;">(🏆 ${record} kg)</span>` : '';
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><strong>${ex.name}</strong></td>
-                    <td><input type="number" class="editable sets-count" data-idx="${idx}" value="${sets}" min="1" style="width:60px"></td>
-                    <td><input type="number" class="editable planned-reps" data-idx="${idx}" value="${reps}" min="1" style="width:60px"></td>
+                    <td><strong>${ex.name}</strong>${recordDisplay}</td>
+                    <td><input type="number" class="editable sets-count" data-idx="${idx}" value="${sets}" min="1" step="1" style="width:60px"></td>
+                    <td><input type="number" class="editable planned-reps" data-idx="${idx}" value="${reps}" min="1" step="1" style="width:60px"></td>
                     <td>
-                        <input type="number" class="editable planned-weight" data-idx="${idx}" value="${scaledWeight}" step="0.5" style="width:80px">
+                        <input type="number" class="editable planned-weight" data-idx="${idx}" value="${scaledWeight}" step="2.5" style="width:90px">
                         <span class="plate-icon" data-weight="${scaledWeight}">🏋️</span>
                     </td>
                     <td>${volume} kg</td>
+                    <td>${avgRpe ? `<span class="rpe-badge">RPE ${avgRpe}</span>` : '-'}</td>
                     <td>
-                        <button class="btn btn-sm edit-sets-btn" data-idx="${idx}">✏️</button>
+                        <button class="btn btn-sm edit-sets-btn" data-idx="${idx}">✏️ Serie</button>
                         <button class="btn btn-sm remove-exercise" data-idx="${idx}">🗑️</button>
                     </td>
                 `;
@@ -512,16 +526,7 @@
             document.getElementById('planned-tonnage').textContent = plannedTonnage.toFixed(0);
             document.querySelectorAll('.edit-sets-btn').forEach(b => b.addEventListener('click', (e)=> openSetEditor(parseInt(b.dataset.idx))));
             document.querySelectorAll('.remove-exercise').forEach(b => b.addEventListener('click', (e)=> {
-                const idx = parseInt(b.dataset.idx);
-                workouts[dateStr].exercises.splice(idx,1);
-                renderWorkoutPanel(); saveData();
-            }));
-            document.querySelectorAll('.sets-count, .planned-reps, .planned-weight').forEach(inp => inp.addEventListener('change', function(){
-                const idx = this.dataset.idx;
-                const ex = workouts[dateStr].exercises[idx];
-                if(this.classList.contains('sets-count')) ex.sets = parseInt(this.value);
-                else if(this.classList.contains('planned-reps')) ex.plannedReps = parseInt(this.value);
-                else ex.plannedWeight = parseFloat(this.value);
+                workouts[dateStr].exercises.splice(parseInt(b.dataset.idx),1);
                 renderWorkoutPanel(); saveData();
             }));
             calculateTotalVolume();
@@ -529,16 +534,33 @@
         function openSetEditor(idx) {
             const dateStr = formatDate(selectedDate);
             const ex = workouts[dateStr].exercises[idx];
-            const sets = ex.actualSets || Array(ex.sets).fill({reps: ex.plannedReps, w: ex.plannedWeight});
+            const sets = ex.actualSets || Array(ex.sets).fill({reps: ex.plannedReps, w: ex.plannedWeight, rpe: 8});
             let html = `<h4>${ex.name}</h4>`;
-            sets.forEach((s,i)=> html+=`<div>Seria ${i+1}: <input id="s-${i}-r" value="${s.reps}"> x <input id="s-${i}-w" value="${s.w}"> kg</div>`);
-            html += `<button id="save-sets">Zapisz</button>`;
-            const modal = document.createElement('div'); modal.style.cssText='position:fixed;top:30%;left:10%;background:#fff;padding:20px;border-radius:24px;z-index:1000;';
-            modal.innerHTML = html; document.body.appendChild(modal);
+            sets.forEach((s,i)=> {
+                html += `<div style="margin-bottom:8px;">Seria ${i+1}: 
+                    <input id="s-${i}-r" value="${s.reps}" style="width:60px;" type="number" step="1"> powt × 
+                    <input id="s-${i}-w" value="${s.w}" style="width:90px;" type="number" step="2.5"> kg 
+                    <label> RPE: <input id="s-${i}-rpe" value="${s.rpe || 8}" style="width:60px;" type="number" min="1" max="10" step="0.5"></label>
+                </div>`;
+            });
+            html += `<button id="save-sets" class="btn btn-primary">Zapisz</button>`;
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed; top:20%; left:5%; right:5%; background:#fff; padding:20px; border-radius:24px; z-index:1000; box-shadow:0 10px 25px rgba(0,0,0,0.2); max-height:80vh; overflow-y:auto;';
+            modal.innerHTML = html;
+            document.body.appendChild(modal);
             document.getElementById('save-sets').onclick = ()=>{
                 const newSets = [];
-                for(let i=0;i<sets.length;i++) newSets.push({reps:+document.getElementById(`s-${i}-r`).value, w:+document.getElementById(`s-${i}-w`).value});
-                ex.actualSets = newSets; modal.remove(); renderWorkoutPanel(); saveData();
+                for(let i=0;i<sets.length;i++) {
+                    newSets.push({
+                        reps: +document.getElementById(`s-${i}-r`).value,
+                        w: +document.getElementById(`s-${i}-w`).value,
+                        rpe: parseFloat(document.getElementById(`s-${i}-rpe`).value)
+                    });
+                }
+                ex.actualSets = newSets;
+                modal.remove();
+                renderWorkoutPanel();
+                saveData();
             };
         }
         function calculateTotalVolume() {
@@ -548,45 +570,33 @@
             document.getElementById('total-volume').textContent = total;
         }
 
-        // ---------- EKSPORT ----------
-        function exportToTxt() {
-            const dateStr = formatDate(selectedDate);
-            const w = workouts[dateStr];
-            if(!w) return alert('Brak treningu.');
-            let content = `Trening: ${new Intl.DateTimeFormat('pl').format(selectedDate)}\nTyp: ${w.type}\n`;
-            if(w.type === 'strength') {
-                w.exercises.forEach(ex => {
-                    content += `${ex.name} (${ex.sets} serie, cel: ${ex.plannedReps} @ ${ex.plannedWeight} kg)\n`;
-                    if(ex.actualSets) ex.actualSets.forEach((s, i) => { content += `  Seria ${i+1}: ${s.reps} x ${s.w} kg\n`; });
-                });
-            } else {
-                content += `Czas: ${Math.round(w.duration/60)} min, Tętno: ${w.avgHr}\n`;
-            }
-            const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `trening_${dateStr}.txt`;
-            link.click();
-        }
-
         // ---------- ZAPIS ----------
-        document.getElementById('save-workout-btn').addEventListener('click', ()=>{
+        document.getElementById('complete-workout-btn').addEventListener('click', ()=>{
             const dateStr = formatDate(selectedDate);
             const w = workouts[dateStr];
             if(!w) return;
-            const isDeload = document.getElementById('deload-checkbox').checked;
-            w.deload = isDeload;
-            w.completed = true;
+            w.deload = document.getElementById('deload-checkbox').checked;
+            w.status = 'completed';
             if(w.type !== 'strength') {
                 w.duration = parseInt(document.getElementById('cardio-duration').value)*60;
                 w.avgHr = parseInt(document.getElementById('cardio-hr').value);
+                w.loadScore = (w.duration/60) * (w.avgHr - restingHR);
             }
-            if(w.templateId && w.type==='strength' && !isDeload) {
+            if(w.templateId && w.type==='strength' && !w.deload) {
                 templateUsageCount[w.templateId] = (templateUsageCount[w.templateId]||0)+1;
             }
             updateHistoryFromWorkout(new Date(dateStr));
             saveData(); renderCalendar();
-            alert('✅ Zapisano jako wykonany!');
+            alert('✅ Trening wykonany!');
+            renderWorkoutPanel();
+        });
+        document.getElementById('skip-workout-btn').addEventListener('click', ()=>{
+            const dateStr = formatDate(selectedDate);
+            const w = workouts[dateStr];
+            if(!w) return;
+            w.status = 'skipped';
+            saveData(); renderCalendar();
+            alert('🚫 Trening pominięty.');
             renderWorkoutPanel();
         });
         function updateHistoryFromWorkout(date) {
@@ -595,13 +605,17 @@
             w.exercises.forEach(ex => {
                 const id = ex.name;
                 if(!exerciseHistory[id]) exerciseHistory[id] = [];
-                let maxW=0, e1rm=0, vol=0;
+                let maxW=0, e1rm=0, vol=0, rpeSum=0, rpeCount=0;
                 if(ex.actualSets) ex.actualSets.forEach(s=>{
                     if(s.w>maxW) maxW=s.w;
                     const e = s.w*(1+s.reps/30); if(e>e1rm) e1rm=e;
                     vol += s.w*s.reps;
+                    if(s.rpe) { rpeSum += s.rpe; rpeCount++; }
                 });
-                exerciseHistory[id].push({ date: formatDate(date), maxWeight: maxW, e1rm: Math.round(e1rm*10)/10, volume: vol });
+                exerciseHistory[id].push({ 
+                    date: formatDate(date), maxWeight: maxW, e1rm: Math.round(e1rm*10)/10, volume: vol,
+                    avgRpe: rpeCount ? Math.round((rpeSum/rpeCount)*10)/10 : null
+                });
             });
         }
 
@@ -613,7 +627,7 @@
             days.forEach((name, i) => {
                 const dayIndex = i===6 ? 0 : i+1;
                 const div = document.createElement('div');
-                div.style.display='flex'; div.style.alignItems='center'; div.style.gap='8px'; div.style.flexWrap='wrap';
+                div.style.display='flex'; div.style.alignItems='center'; div.style.gap='8px';
                 const typeSelect = document.createElement('select');
                 typeSelect.className = 'weekly-type btn'; typeSelect.dataset.day = dayIndex;
                 ['rest','strength','run','home'].forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v==='rest'?'😴 Odpoczynek':v==='strength'?'🏋️ Siłownia':v==='run'?'🏃 Bieganie':'🧘 Dom'; typeSelect.appendChild(o); });
@@ -624,9 +638,7 @@
                 tplSelect.innerHTML = '<option value="">-- Brak --</option>';
                 templates.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; tplSelect.appendChild(o); });
                 if(templateAssignments[dayIndex]) tplSelect.value = templateAssignments[dayIndex];
-                typeSelect.addEventListener('change', ()=>{
-                    tplSelect.style.display = typeSelect.value==='strength'?'inline':'none';
-                });
+                typeSelect.addEventListener('change', ()=> tplSelect.style.display = typeSelect.value==='strength'?'inline':'none');
                 div.appendChild(document.createTextNode(name));
                 div.appendChild(typeSelect);
                 div.appendChild(tplSelect);
@@ -649,7 +661,7 @@
             const list = document.getElementById('templates-list');
             list.innerHTML = templates.map(t => `
                 <div style="border:1px solid #e2e8f0; border-radius:16px; padding:14px; margin-bottom:12px;">
-                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap;">
+                    <div style="display:flex; justify-content:space-between;">
                         <strong>${t.name}</strong>
                         <span>📈 +${t.progressionPercent}% / ${t.progressionSessions} treningi | Wykonano: ${templateUsageCount[t.id]||0}</span>
                         <div>
@@ -657,7 +669,7 @@
                             <button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button>
                         </div>
                     </div>
-                    <ul style="margin-top:8px;">${t.exercises.map(e=>`<li>${e.name}: ${e.sets}x${e.reps} @ ${e.startWeight}kg</li>`).join('')}</ul>
+                    <ul>${t.exercises.map(e=>`<li>${e.name}: ${e.sets}x${e.reps} @ ${e.startWeight}kg</li>`).join('')}</ul>
                 </div>
             `).join('');
             document.querySelectorAll('.edit-template').forEach(b => b.addEventListener('click', ()=> editTemplate(b.dataset.id)));
@@ -680,17 +692,57 @@
         function renderTemplateExercisesTable(exercises) {
             const tbody = document.querySelector('#template-exercises-table tbody');
             tbody.innerHTML = '';
-            exercises.forEach(ex => {
+            exercises.forEach((ex, idx) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="text" value="${ex.name}" class="tpl-ex-name"></td>
                     <td><input type="number" value="${ex.sets}" min="1" class="tpl-ex-sets" style="width:60px"></td>
                     <td><input type="number" value="${ex.reps}" min="1" class="tpl-ex-reps" style="width:60px"></td>
-                    <td><input type="number" value="${ex.startWeight}" step="0.5" class="tpl-ex-weight" style="width:80px"></td>
+                    <td><input type="number" value="${ex.startWeight}" step="2.5" class="tpl-ex-weight" style="width:90px"></td>
+                    <td>
+                        <input type="number" placeholder="+%" class="tpl-ex-prog-perc" value="${ex.progressionPercent || ''}" style="width:60px;">
+                        <input type="number" placeholder="co" class="tpl-ex-prog-sess" value="${ex.progressionSessions || ''}" style="width:60px;">
+                        <button class="btn btn-sm edit-tpl-series-btn" data-idx="${idx}">✏️ Serie</button>
+                    </td>
                     <td><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>
                 `;
                 tbody.appendChild(row);
             });
+            document.querySelectorAll('.edit-tpl-series-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.dataset.idx);
+                    editTemplateSeries(idx);
+                });
+            });
+            document.querySelectorAll('.remove-tpl-ex').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('tr').remove()));
+        }
+        function editTemplateSeries(idx) {
+            const row = document.querySelectorAll('#template-exercises-table tbody tr')[idx];
+            const name = row.querySelector('.tpl-ex-name').value;
+            const sets = parseInt(row.querySelector('.tpl-ex-sets').value) || 3;
+            const reps = parseInt(row.querySelector('.tpl-ex-reps').value) || 8;
+            const weight = parseFloat(row.querySelector('.tpl-ex-weight').value) || 20;
+            
+            let html = `<h4>${name} – definiuj serie</h4>`;
+            for (let i=0; i<sets; i++) {
+                html += `<div style="margin-bottom:8px;">Seria ${i+1}: 
+                    <input id="tpl-s-${i}-reps" value="${reps}" style="width:60px;" type="number" min="1"> powt × 
+                    <input id="tpl-s-${i}-weight" value="${weight}" style="width:90px;" type="number" step="2.5" min="0"> kg
+                </div>`;
+            }
+            html += `<button id="save-tpl-series" class="btn btn-primary">Zapisz</button>`;
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed; top:20%; left:5%; right:5%; background:#fff; padding:20px; border-radius:24px; z-index:1000;';
+            modal.innerHTML = html;
+            document.body.appendChild(modal);
+            document.getElementById('save-tpl-series').onclick = () => {
+                // Można by zapisać niestandardowe serie, ale na razie aktualizujemy domyślne wartości
+                const newReps = parseInt(document.getElementById('tpl-s-0-reps').value) || reps;
+                const newWeight = parseFloat(document.getElementById('tpl-s-0-weight').value) || weight;
+                row.querySelector('.tpl-ex-reps').value = newReps;
+                row.querySelector('.tpl-ex-weight').value = newWeight;
+                modal.remove();
+            };
         }
         function getTemplateExercisesFromForm() {
             const rows = document.querySelectorAll('#template-exercises-table tbody tr');
@@ -698,36 +750,40 @@
                 name: row.querySelector('.tpl-ex-name').value,
                 sets: parseInt(row.querySelector('.tpl-ex-sets').value),
                 reps: parseInt(row.querySelector('.tpl-ex-reps').value),
-                startWeight: parseFloat(row.querySelector('.tpl-ex-weight').value)
+                startWeight: parseFloat(row.querySelector('.tpl-ex-weight').value),
+                progressionPercent: row.querySelector('.tpl-ex-prog-perc').value ? parseFloat(row.querySelector('.tpl-ex-prog-perc').value) : null,
+                progressionSessions: row.querySelector('.tpl-ex-prog-sess').value ? parseInt(row.querySelector('.tpl-ex-prog-sess').value) : null
             })).filter(e => e.name);
         }
 
-        // ---------- CYKL 4 TYG. (klikalny) ----------
-        function renderFuturePlan() {
-            const container = document.getElementById('future-plan-container');
-            const start = new Date(selectedDate);
-            let html = '<table style="min-width:700px;"><tr><th>Data</th><th>Dzień</th><th>Typ</th><th>Opis</th><th>Deload</th><th>Status</th></tr>';
-            for(let i=0; i<28; i++) {
-                const d = new Date(start); d.setDate(start.getDate()+i);
-                const dateStr = formatDate(d);
-                const w = workouts[dateStr] || generateWorkoutFromWeeklyPlan(d);
-                const desc = w.type==='strength' ? (w.exercises?.map(e=>e.name).join(', ')||'Brak') : (w.type==='run'?'Bieg':w.type==='home'?'Dom':'Odpoczynek');
-                html += `<tr class="clickable-row" data-date="${dateStr}" style="cursor:pointer;">
-                    <td>${dateStr}</td><td>${['Nd','Pn','Wt','Śr','Cz','Pt','So'][d.getDay()]}</td><td>${w.type}</td><td>${desc}</td>
-                    <td>${w.deload?'🌿 Tak':'Nie'}</td><td>${w.completed?'✅':'⏳'}</td>
-                </tr>`;
-            }
-            html += '</table>';
-            container.innerHTML = html;
-            container.querySelectorAll('.clickable-row').forEach(row => {
-                row.addEventListener('click', () => {
-                    const dateStr = row.dataset.date;
-                    selectedDate = new Date(dateStr + 'T12:00:00');
-                    renderCalendar();
-                    document.querySelector('[data-tab="workout"]').click();
-                    renderWorkoutPanel();
-                });
+        // ---------- REKORDY ----------
+        function renderRecordsPanel() {
+            const container = document.getElementById('records-container');
+            const exercisesSet = new Set();
+            templates.forEach(t => t.exercises.forEach(e => exercisesSet.add(e.name)));
+            const exercises = Array.from(exercisesSet).sort();
+            let html = '';
+            exercises.forEach(exName => {
+                const record = personalRecords[exName] || '';
+                html += `
+                    <div style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #e2e8f0;">
+                        <span style="flex:1; font-weight:500;">${exName}</span>
+                        <input type="number" class="record-input" data-exercise="${exName}" value="${record}" placeholder="kg" step="2.5" min="0" style="width:100px;">
+                        <span>kg</span>
+                    </div>
+                `;
             });
+            container.innerHTML = html || '<p>Brak ćwiczeń w szablonach.</p>';
+        }
+        function saveRecords() {
+            document.querySelectorAll('.record-input').forEach(input => {
+                const ex = input.dataset.exercise;
+                const val = parseFloat(input.value);
+                if (!isNaN(val) && val > 0) personalRecords[ex] = val;
+                else delete personalRecords[ex];
+            });
+            saveData();
+            alert('✅ Rekordy zapisane!');
         }
 
         // ---------- PROGRES ----------
@@ -754,15 +810,20 @@
         function renderWeeklyVolumeChart() {
             const vols = {};
             Object.entries(workouts).forEach(([d,w])=>{
-                if(w.type!=='strength' || !w.completed) return;
+                if(w.status !== 'completed') return;
                 const week = getWeekNumber(new Date(d));
                 const key = `${new Date(d).getFullYear()}-W${week}`;
-                let v=0; w.exercises?.forEach(ex=>{ if(ex.actualSets) ex.actualSets.forEach(s=> v+= s.w*s.reps); });
-                vols[key] = (vols[key]||0)+v;
+                let load = 0;
+                if(w.type === 'strength') {
+                    w.exercises?.forEach(ex=>{ if(ex.actualSets) ex.actualSets.forEach(s => load += s.w*s.reps); });
+                } else if(w.type === 'run' || w.type === 'home') {
+                    load = w.loadScore || 0;
+                }
+                vols[key] = (vols[key]||0) + load;
             });
             const keys = Object.keys(vols).sort();
             if(weeklyChart) weeklyChart.destroy();
-            weeklyChart = new Chart(document.getElementById('weekly-volume-chart'), { type:'bar', data:{ labels:keys, datasets:[{ label:'Tonaż (kg)', data: keys.map(k=>vols[k]) }] }});
+            weeklyChart = new Chart(document.getElementById('weekly-volume-chart'), { type:'bar', data:{ labels:keys, datasets:[{ label:'Obciążenie tygodnia', data: keys.map(k=>vols[k]) }] }});
         }
 
         // ---------- INIT ----------
@@ -778,13 +839,28 @@
                 if(t.dataset.tab==='progress') { populateProgressSelect(); renderWeeklyVolumeChart(); }
                 if(t.dataset.tab==='future') renderFuturePlan();
                 if(t.dataset.tab==='workout') renderWorkoutPanel();
+                if(t.dataset.tab==='records') renderRecordsPanel();
             }));
             
             document.getElementById('prev-month').addEventListener('click', ()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
             document.getElementById('next-month').addEventListener('click', ()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
-            document.getElementById('sync-calendar-from-weekly').addEventListener('click', syncCalendarFromWeeklyPlan);
+            document.getElementById('sync-calendar-from-weekly').addEventListener('click', ()=>{
+                const year = currentDate.getFullYear(), month = currentDate.getMonth();
+                const today = new Date(); today.setHours(0,0,0,0);
+                for(let d=1; d<=new Date(year, month+1, 0).getDate(); d++) {
+                    const date = new Date(year, month, d);
+                    if (date < today) continue; // nie nadpisuj przeszłości
+                    const dateStr = formatDate(date);
+                    const existing = workouts[dateStr];
+                    if (!existing || existing.status === 'planned') {
+                        workouts[dateStr] = generateWorkoutFromWeeklyPlan(date);
+                    }
+                }
+                saveData(); renderCalendar(); alert('✅ Miesiąc zaktualizowany.');
+            });
             document.getElementById('refresh-from-weekly-btn').addEventListener('click', ()=>{
-                if(workouts[formatDate(selectedDate)]?.completed && !confirm('Wykonany trening zostanie nadpisany. Kontynuować?')) return;
+                const w = workouts[formatDate(selectedDate)];
+                if(w && w.status !== 'planned' && !confirm('Nadpisać?')) return;
                 workouts[formatDate(selectedDate)] = generateWorkoutFromWeeklyPlan(selectedDate);
                 saveData(); renderWorkoutPanel(); renderCalendar();
             });
@@ -798,13 +874,17 @@
             });
             function addExercise(name) {
                 const d = formatDate(selectedDate);
-                if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, completed:false };
-                workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedReps:8, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20}), templateExercise: false });
+                if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, status:'planned' };
+                workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedReps:8, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20,rpe:8}), templateExercise: false });
                 renderWorkoutPanel(); saveData();
                 document.getElementById('add-exercise-form').style.display='none';
                 document.getElementById('custom-exercise-name').value='';
             }
-            // Szablony
+            
+            document.getElementById('user-height').addEventListener('input', ()=>{ userHeight = parseFloat(document.getElementById('user-height').value)||175; updateBMI(); saveData(); });
+            document.getElementById('user-weight').addEventListener('input', ()=>{ userWeight = parseFloat(document.getElementById('user-weight').value)||70; updateBMI(); saveData(); });
+            document.getElementById('resting-hr').addEventListener('input', ()=>{ restingHR = parseFloat(document.getElementById('resting-hr').value)||60; saveData(); });
+            
             document.getElementById('create-template-btn').addEventListener('click', ()=>{
                 document.getElementById('edit-template-id').value = '';
                 document.getElementById('template-name').value = '';
@@ -814,8 +894,12 @@
             document.getElementById('add-exercise-to-template').addEventListener('click', ()=>{
                 const tbody = document.querySelector('#template-exercises-table tbody');
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" class="tpl-ex-name" value="Nowe"></td><td><input type="number" class="tpl-ex-sets" value="3"></td><td><input type="number" class="tpl-ex-reps" value="8"></td><td><input type="number" class="tpl-ex-weight" value="20" step="0.5"></td><td><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`;
+                row.innerHTML = `<td><input type="text" class="tpl-ex-name" value="Nowe"></td><td><input type="number" class="tpl-ex-sets" value="3"></td><td><input type="number" class="tpl-ex-reps" value="8"></td><td><input type="number" class="tpl-ex-weight" value="20" step="2.5"></td>
+                <td><input type="number" placeholder="+%" class="tpl-ex-prog-perc"><input type="number" placeholder="co" class="tpl-ex-prog-sess"><button class="btn btn-sm edit-tpl-series-btn">✏️ Serie</button></td>
+                <td><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`;
                 tbody.appendChild(row);
+                const idx = tbody.children.length - 1;
+                row.querySelector('.edit-tpl-series-btn').addEventListener('click', ()=> editTemplateSeries(idx));
                 row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> row.remove());
             });
             document.getElementById('save-template-btn').addEventListener('click', ()=>{
@@ -832,8 +916,31 @@
                 document.getElementById('template-form').style.display='none';
             });
             document.getElementById('cancel-template-btn').addEventListener('click', ()=> document.getElementById('template-form').style.display='none');
+            
+            document.getElementById('save-records-btn').addEventListener('click', saveRecords);
+            
             document.getElementById('progress-exercise-select').addEventListener('change', e=> renderProgressChart(e.target.value));
-            document.getElementById('export-txt-btn').addEventListener('click', exportToTxt);
+            document.getElementById('export-txt-btn').addEventListener('click', ()=>{
+                const dateStr = formatDate(selectedDate);
+                const w = workouts[dateStr];
+                if(!w) return alert('Brak treningu.');
+                let content = `Trening: ${new Intl.DateTimeFormat('pl').format(selectedDate)}\nTyp: ${w.type}\n`;
+                if(w.type === 'strength') {
+                    w.exercises.forEach(ex => {
+                        content += `${ex.name} (${ex.sets} serie, cel: ${ex.plannedReps} @ ${ex.plannedWeight} kg)\n`;
+                        if(ex.actualSets) ex.actualSets.forEach((s, i) => { 
+                            content += `  Seria ${i+1}: ${s.reps} x ${s.w} kg` + (s.rpe ? `, RPE ${s.rpe}` : '') + '\n'; 
+                        });
+                    });
+                } else {
+                    content += `Czas: ${Math.round(w.duration/60)} min, Tętno: ${w.avgHr}\n`;
+                }
+                const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `trening_${dateStr}.txt`;
+                link.click();
+            });
         });
     })();
 </script>
