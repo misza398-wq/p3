@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>💪 Cykl PRO – kompletny</title>
+    <title>💪 Cykl PRO – waga w progresie</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; }
@@ -45,6 +45,7 @@
         <label>⚖️ Waga (kg): <input id="user-weight" type="number" min="30" max="300" value="70" style="width:80px;"></label>
         <span>📊 BMI: <strong id="bmi-display">22.9</strong></span>
         <span style="margin-left:auto;">❤️ Tętno spocz.: <input id="resting-hr" type="number" min="40" max="100" value="60" style="width:70px;"></span>
+        <button class="btn btn-sm" id="save-weight-today">💾 Zapisz wagę na dziś</button>
     </div>
     
     <div class="tabs">
@@ -191,6 +192,8 @@
         <div class="chart-container"><canvas id="progress-chart"></canvas></div>
         <h3 style="margin-top:30px;">📅 Tonaż tygodniowy</h3>
         <div class="chart-container"><canvas id="weekly-volume-chart"></canvas></div>
+        <h3 style="margin-top:30px;">⚖️ Historia wagi</h3>
+        <div class="chart-container"><canvas id="weight-chart"></canvas></div>
     </div>
 
     <!-- PANEL REKORDÓW -->
@@ -216,17 +219,18 @@
         let templateUsageCount = {};      
         
         let currentDisposition = 1.0;
-        let progressChart = null, weeklyChart = null;
+        let progressChart = null, weeklyChart = null, weightChart = null;
         
-        // Nowe zmienne
+        // Dane użytkownika
         let userHeight = 175;
         let userWeight = 70;
         let restingHR = 60;
         let personalRecords = {};
+        let weightHistory = {}; // data -> waga (kg)
         
         // ---------- LOCALSTORAGE ----------
         function loadData() {
-            const saved = localStorage.getItem('cykl_pro_full');
+            const saved = localStorage.getItem('cykl_pro_full_v2');
             if(saved) {
                 try {
                     const data = JSON.parse(saved);
@@ -240,21 +244,29 @@
                     userWeight = data.userWeight || 70;
                     restingHR = data.restingHR || 60;
                     personalRecords = data.personalRecords || {};
+                    weightHistory = data.weightHistory || {};
                     Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; delete w.completed; });
                 } catch(e){}
             }
             if(templates.length === 0) createDefaultTemplates();
-            if(Object.keys(workouts).length === 0) generateDemoData();
-            // Aktualizuj UI pól użytkownika
+            // USUWAMY DEMO DANE Z KWIETNIA
+            delete workouts['2026-04-08'];
+            delete workouts['2026-04-10'];
+            delete workouts['2026-04-12'];
+            delete workouts['2026-04-14'];
+            if(Object.keys(workouts).length === 0) {
+                // pusta baza – nic nie dodajemy
+            }
             document.getElementById('user-height').value = userHeight;
             document.getElementById('user-weight').value = userWeight;
             document.getElementById('resting-hr').value = restingHR;
             updateBMI();
+            saveData(); // zapisz po usunięciu
         }
         function saveData() {
-            localStorage.setItem('cykl_pro_full', JSON.stringify({
+            localStorage.setItem('cykl_pro_full_v2', JSON.stringify({
                 workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, templateUsageCount,
-                userHeight, userWeight, restingHR, personalRecords
+                userHeight, userWeight, restingHR, personalRecords, weightHistory
             }));
         }
         function createDefaultTemplates() {
@@ -272,20 +284,7 @@
                     { name: 'Uginanie ramion ze sztangą', sets: 3, reps: 12, startWeight: 30, progressionPercent: null, progressionSessions: null }
                 ]
             });
-            templateUsageCount = { 'tpl1': 2, 'tpl2': 1 };
-            saveData();
-        }
-        function generateDemoData() {
-            const d1 = '2026-04-08', d2 = '2026-04-10', d3 = '2026-04-12';
-            workouts[d1] = { type:'strength', deload:false, templateId:'tpl1', status:'completed', exercises:[
-                { id:'b1', name:'Wyciskanie sztangi leżąc', sets:4, plannedReps:8, plannedWeight:80, actualSets:[{reps:8,w:80,rpe:7},{reps:8,w:80,rpe:7.5},{reps:7,w:80,rpe:8},{reps:7,w:80,rpe:8.5}] }
-            ]};
-            workouts[d2] = { type:'strength', deload:false, templateId:'tpl2', status:'completed', exercises:[
-                { id:'b2', name:'Wiosłowanie sztangą', sets:4, plannedReps:8, plannedWeight:70, actualSets:[{reps:8,w:70,rpe:6},{reps:8,w:70,rpe:7},{reps:8,w:70,rpe:7},{reps:6,w:70,rpe:9}] }
-            ]};
-            workouts[d3] = { type:'run', duration:40*60, avgHr:155, status:'completed', loadScore: (40) * (155 - 60) };
-            Object.keys(workouts).forEach(d => { if(workouts[d].type==='strength') updateHistoryFromWorkout(new Date(d)); });
-            saveData();
+            templateUsageCount = { 'tpl1': 0, 'tpl2': 0 };
         }
 
         // ---------- POMOCNICZE ----------
@@ -312,7 +311,7 @@
             document.getElementById('bmi-display').textContent = bmi;
         }
 
-        // ---------- KALENDARZ (bez wstecznych treningów) ----------
+        // ---------- KALENDARZ ----------
         function renderCalendar() {
             const year = currentDate.getFullYear(), month = currentDate.getMonth();
             const firstDay = new Date(year, month, 1);
@@ -327,19 +326,15 @@
             for(let i=0; i<42; i++) {
                 const cellDate = new Date(startDate); cellDate.setDate(startDate.getDate() + i);
                 const dateStr = formatDate(cellDate);
-                
-                // Pokaż kropkę tylko jeśli trening istnieje i data jest >= dzisiaj lub trening ma status inny niż planned
                 const w = workouts[dateStr];
                 let status = null;
                 if (w) {
-                    // Jeśli trening jest w przeszłości i ma status planned, ukryj go (chyba że to dzisiaj)
                     if (cellDate < today && w.status === 'planned' && dateStr !== todayStr) {
-                        status = null; // nie pokazuj kropki
+                        status = null;
                     } else {
                         status = w.status;
                     }
                 }
-                
                 const cell = document.createElement('div');
                 cell.className = 'day-cell';
                 if (status) cell.classList.add(`status-${status}`);
@@ -347,13 +342,11 @@
                 if(dateStr === selectedStr) cell.classList.add('selected');
                 if(cellDate.getMonth() !== month) cell.style.opacity = '0.5';
                 cell.textContent = cellDate.getDate();
-                
                 if (status) {
                     const dot = document.createElement('span');
                     dot.className = 'status-dot';
                     cell.appendChild(dot);
                 }
-                
                 cell.addEventListener('click', ()=>{
                     selectedDate = new Date(cellDate);
                     renderCalendar();
@@ -405,7 +398,6 @@
             return { type:'rest', status: 'planned' };
         }
 
-        // ---------- GENEROWANIE 4 TYGODNI ----------
         function generateFutureFourWeeks() {
             const startDate = new Date(currentDate);
             startDate.setHours(0,0,0,0);
@@ -570,7 +562,16 @@
             document.getElementById('total-volume').textContent = total;
         }
 
-        // ---------- ZAPIS ----------
+        // ---------- ZAPIS WAGI ----------
+        function saveWeightForToday() {
+            const todayStr = formatDate(new Date());
+            weightHistory[todayStr] = userWeight;
+            saveData();
+            alert(`✅ Waga ${userWeight} kg zapisana na dziś.`);
+            renderWeightChart();
+        }
+
+        // ---------- ZAPIS TRENINGU ----------
         document.getElementById('complete-workout-btn').addEventListener('click', ()=>{
             const dateStr = formatDate(selectedDate);
             const w = workouts[dateStr];
@@ -709,10 +710,7 @@
                 tbody.appendChild(row);
             });
             document.querySelectorAll('.edit-tpl-series-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const idx = parseInt(btn.dataset.idx);
-                    editTemplateSeries(idx);
-                });
+                btn.addEventListener('click', (e) => editTemplateSeries(parseInt(btn.dataset.idx)));
             });
             document.querySelectorAll('.remove-tpl-ex').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('tr').remove()));
         }
@@ -722,7 +720,6 @@
             const sets = parseInt(row.querySelector('.tpl-ex-sets').value) || 3;
             const reps = parseInt(row.querySelector('.tpl-ex-reps').value) || 8;
             const weight = parseFloat(row.querySelector('.tpl-ex-weight').value) || 20;
-            
             let html = `<h4>${name} – definiuj serie</h4>`;
             for (let i=0; i<sets; i++) {
                 html += `<div style="margin-bottom:8px;">Seria ${i+1}: 
@@ -736,7 +733,6 @@
             modal.innerHTML = html;
             document.body.appendChild(modal);
             document.getElementById('save-tpl-series').onclick = () => {
-                // Można by zapisać niestandardowe serie, ale na razie aktualizujemy domyślne wartości
                 const newReps = parseInt(document.getElementById('tpl-s-0-reps').value) || reps;
                 const newWeight = parseFloat(document.getElementById('tpl-s-0-weight').value) || weight;
                 row.querySelector('.tpl-ex-reps').value = newReps;
@@ -825,6 +821,17 @@
             if(weeklyChart) weeklyChart.destroy();
             weeklyChart = new Chart(document.getElementById('weekly-volume-chart'), { type:'bar', data:{ labels:keys, datasets:[{ label:'Obciążenie tygodnia', data: keys.map(k=>vols[k]) }] }});
         }
+        function renderWeightChart() {
+            const entries = Object.entries(weightHistory).sort((a,b)=>a[0].localeCompare(b[0]));
+            const labels = entries.map(e=>e[0]);
+            const data = entries.map(e=>e[1]);
+            if(weightChart) weightChart.destroy();
+            const ctx = document.getElementById('weight-chart').getContext('2d');
+            weightChart = new Chart(ctx, {
+                type: 'line', data: { labels, datasets: [{ label: 'Waga (kg)', data, borderColor: '#8b5cf6', tension: 0.2 }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
 
         // ---------- INIT ----------
         document.addEventListener('DOMContentLoaded', ()=>{
@@ -836,7 +843,7 @@
                 document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
                 t.classList.add('active');
                 document.getElementById(t.dataset.tab+'-panel').classList.add('active');
-                if(t.dataset.tab==='progress') { populateProgressSelect(); renderWeeklyVolumeChart(); }
+                if(t.dataset.tab==='progress') { populateProgressSelect(); renderWeeklyVolumeChart(); renderWeightChart(); }
                 if(t.dataset.tab==='future') renderFuturePlan();
                 if(t.dataset.tab==='workout') renderWorkoutPanel();
                 if(t.dataset.tab==='records') renderRecordsPanel();
@@ -849,7 +856,7 @@
                 const today = new Date(); today.setHours(0,0,0,0);
                 for(let d=1; d<=new Date(year, month+1, 0).getDate(); d++) {
                     const date = new Date(year, month, d);
-                    if (date < today) continue; // nie nadpisuj przeszłości
+                    if (date < today) continue;
                     const dateStr = formatDate(date);
                     const existing = workouts[dateStr];
                     if (!existing || existing.status === 'planned') {
@@ -884,6 +891,7 @@
             document.getElementById('user-height').addEventListener('input', ()=>{ userHeight = parseFloat(document.getElementById('user-height').value)||175; updateBMI(); saveData(); });
             document.getElementById('user-weight').addEventListener('input', ()=>{ userWeight = parseFloat(document.getElementById('user-weight').value)||70; updateBMI(); saveData(); });
             document.getElementById('resting-hr').addEventListener('input', ()=>{ restingHR = parseFloat(document.getElementById('resting-hr').value)||60; saveData(); });
+            document.getElementById('save-weight-today').addEventListener('click', saveWeightForToday);
             
             document.getElementById('create-template-btn').addEventListener('click', ()=>{
                 document.getElementById('edit-template-id').value = '';
