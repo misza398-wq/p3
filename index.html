@@ -3,49 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>💪 Cykl PRO – waga w progresie</title>
+    <title>💪 Cykl PRO – edycja serii w szablonach</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; margin: 0; padding: 0; }
-        body { background: #f5f7fa; padding: 12px 8px; color: #1e293b; }
+        body { background: #f5f7fa; padding: 12px 8px; color: #1e293b; transition: background 0.2s, color 0.2s; }
+        body.dark { background: #0f172a; color: #e2e8f0; }
         .app { max-width: 1300px; margin: 0 auto; }
         h1 { font-size: 1.7rem; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .user-stats { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; background: white; padding: 10px 16px; border-radius: 40px; }
+        .user-stats { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; background: white; padding: 10px 16px; border-radius: 40px; transition: background 0.2s; }
+        body.dark .user-stats { background: #1e293b; }
         .tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
-        .tab { padding: 8px 14px; background: white; border-radius: 30px; cursor: pointer; border: 1px solid #cbd5e1; }
+        .tab { padding: 8px 14px; background: white; border-radius: 30px; cursor: pointer; border: 1px solid #cbd5e1; transition: 0.1s; }
+        body.dark .tab { background: #1e293b; border-color: #334155; color: #e2e8f0; }
         .tab.active { background: #0f172a; color: white; }
-        .panel { display: none; background: white; border-radius: 20px; padding: 18px 14px; margin-bottom: 16px; }
+        body.dark .tab.active { background: #3b82f6; }
+        .panel { display: none; background: white; border-radius: 20px; padding: 18px 14px; margin-bottom: 16px; box-shadow: 0 6px 16px rgba(0,0,0,0.03); border: 1px solid #eef2f6; transition: background 0.2s, border 0.2s; }
+        body.dark .panel { background: #1e293b; border-color: #334155; }
         .panel.active { display: block; }
-        .btn { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 40px; cursor: pointer; }
+        .btn { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 40px; cursor: pointer; font-weight: 500; transition: 0.1s; }
+        body.dark .btn { background: #334155; border-color: #475569; color: #e2e8f0; }
         .btn-primary { background: #0f172a; color: white; border: none; }
+        body.dark .btn-primary { background: #3b82f6; }
         .btn-warning { background: #dc3545; color: white; border: none; }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        input, select, textarea { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 30px; background: white; font-size: 0.9rem; transition: 0.1s; }
+        body.dark input, body.dark select, body.dark textarea { background: #0f172a; border-color: #475569; color: #e2e8f0; }
         .editable { background: transparent; border: none; padding: 4px 6px; border-radius: 8px; width: 70px; text-align: center; }
+        body.dark .editable { color: #e2e8f0; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px 6px; border-bottom: 1px solid #edf2f7; }
+        body.dark th, body.dark td { border-bottom-color: #334155; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
-        .day-cell { aspect-ratio: 1/1; background: #fafbfc; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .day-cell { aspect-ratio: 1/1; background: #fafbfc; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; border: 1px solid #eef2f6; }
+        body.dark .day-cell { background: #1e293b; border-color: #334155; }
         .day-cell.today { border: 2px solid #0f172a; }
+        body.dark .day-cell.today { border-color: #3b82f6; }
         .day-cell.selected { background: #0f172a; color: white; }
+        body.dark .day-cell.selected { background: #3b82f6; }
         .day-cell .status-dot { position: absolute; bottom: 4px; width: 8px; height: 8px; border-radius: 50%; }
         .status-planned .status-dot { background: #3b82f6; }
         .status-completed .status-dot { background: #10b981; }
         .status-skipped .status-dot { background: #ef4444; }
-        .day-cell.selected .status-dot { background: white; }
         .table-responsive { overflow-x: auto; }
         .clickable-row { cursor: pointer; }
         .rpe-badge { background: #e9ecef; border-radius: 20px; padding: 2px 8px; font-size: 0.8rem; }
+        body.dark .rpe-badge { background: #334155; }
+        .number-control { display: flex; align-items: center; gap: 2px; }
+        .number-control button { width: 36px; height: 36px; padding: 0; font-size: 1.3rem; line-height: 1; }
+        .settings-bar { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 10px; flex-wrap: wrap; }
+        .timer-panel { background: #f1f5f9; border-radius: 20px; padding: 12px; margin: 12px 0; }
+        body.dark .timer-panel { background: #0f172a; }
+        .favorite-star { cursor: pointer; font-size: 1.2rem; margin-left: 5px; }
+        .search-box { margin-bottom: 10px; }
+        .series-editor-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        .series-editor-row .number-control { display: inline-flex; }
+        
+        /* Dodane klasy dla ujednolicenia motywu */
+        .panel-light { background: #f1f5f9; padding: 14px; border-radius: 20px; }
+        body.dark .panel-light { background: #1e293b; color: #e2e8f0; }
+        .cycle-ind { font-size: 0.8rem; background: #e6edf5; padding: 4px 10px; border-radius: 40px; }
+        body.dark .cycle-ind { background: #334155; color: #e2e8f0; }
+
+        /* Klasy Modala dla trybu ciemnego */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 10px; }
+        .modal-box { background: #ffffff; padding: 20px; border-radius: 24px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; color: #1e293b; }
+        body.dark .modal-box { background: #0f172a; color: #e2e8f0; border: 1px solid #334155; }
     </style>
 </head>
 <body>
 <div class="app">
-    <h1>📆 Cykl PRO <span id="cycle-indicator" style="font-size:0.8rem; background:#e6edf5; padding:4px 10px; border-radius:40px;">Mezocykl 1 • Tydzień 2/4</span></h1>
+    <div class="settings-bar">
+        <button class="btn btn-sm" id="dark-mode-toggle">🌙 Tryb ciemny</button>
+        <button class="btn btn-sm" id="export-backup-btn">📤 Eksportuj</button>
+        <button class="btn btn-sm" id="import-backup-btn">📥 Importuj</button>
+        <input type="file" id="backup-file-input" accept=".json" style="display:none;">
+        <button class="btn btn-sm" id="reminder-setup-btn">🔔 Przypomnienia</button>
+    </div>
+    <h1>📆 Cykl PRO <span id="cycle-indicator" class="cycle-ind">Mezocykl 1 • Tydzień 2/4</span></h1>
     
     <div class="user-stats">
         <label>📏 Wzrost (cm): <input id="user-height" type="number" min="100" max="250" value="175" style="width:80px;"></label>
         <label>⚖️ Waga (kg): <input id="user-weight" type="number" min="30" max="300" value="70" style="width:80px;"></label>
         <span>📊 BMI: <strong id="bmi-display">22.9</strong></span>
         <span style="margin-left:auto;">❤️ Tętno spocz.: <input id="resting-hr" type="number" min="40" max="100" value="60" style="width:70px;"></span>
-        <button class="btn btn-sm" id="save-weight-today">💾 Zapisz wagę na dziś</button>
+        <button class="btn btn-sm" id="save-weight-today">💾 Zapisz wagę</button>
     </div>
     
     <div class="tabs">
@@ -58,11 +100,10 @@
         <div class="tab" data-tab="records">🏆 Rekordy</div>
     </div>
 
-    <!-- PANEL KALENDARZA -->
     <div id="calendar-panel" class="panel active">
         <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
             <button class="btn" id="prev-month">←</button>
-            <h3 id="month-year">Kwiecień 2026</h3>
+            <h3 id="month-year">Miesiąc Rok</h3>
             <button class="btn" id="next-month">→</button>
         </div>
         <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; color:#64748b;">
@@ -79,20 +120,19 @@
         </div>
     </div>
 
-    <!-- PANEL TRENINGU DNIA -->
     <div id="workout-panel" class="panel">
         <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom:12px;">
-            <h2 id="selected-date-title">15 kwietnia 2026</h2>
+            <h2 id="selected-date-title">Data</h2>
             <div style="display:flex; gap:6px;">
-                <button class="btn btn-primary" id="complete-workout-btn">✔ Wykonany – zapisz</button>
+                <button class="btn btn-primary" id="complete-workout-btn">✔ Wykonany</button>
                 <button class="btn btn-warning" id="skip-workout-btn">🚫 Pomiń</button>
                 <button class="btn" id="export-txt-btn">📄 TXT</button>
                 <button class="btn" id="refresh-from-weekly-btn">⟲ Odśwież</button>
             </div>
         </div>
-        <label style="margin-bottom:14px;"><input type="checkbox" id="deload-checkbox"> 🌿 Deload (-10% ciężaru, bez progresji)</label>
+        <label style="margin-bottom:14px;"><input type="checkbox" id="deload-checkbox"> 🌿 Deload (-10% ciężaru)</label>
         
-        <div id="disposition-slider-container" style="margin-bottom:16px; background:#f1f5f9; padding:10px 16px; border-radius:40px;">
+        <div id="disposition-slider-container" class="panel-light" style="margin-bottom:16px;">
             <div style="display:flex; align-items:center; gap:12px;">
                 <span>😴 Dyspozycja:</span>
                 <input type="range" id="disposition-slider" min="50" max="100" value="100" step="5" style="flex:1;">
@@ -100,13 +140,22 @@
             </div>
         </div>
 
+        <div class="timer-panel">
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span>⏱️ Timer: </span>
+                <input type="number" id="timer-duration" value="90" min="10" max="300" step="5" style="width:80px;"> s
+                <button class="btn btn-sm" id="start-timer-btn">Start</button>
+                <button class="btn btn-sm" id="stop-timer-btn">Stop</button>
+                <span id="timer-display" style="font-weight:bold; margin-left:auto;">90 s</span>
+            </div>
+        </div>
+
         <div id="strength-view">
-            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; background:#f8fafc; padding:12px; border-radius:20px;">
+            <div class="panel-light" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
                 <span>🎯 Cel: <strong id="progression-goal">+5%</strong></span>
                 <span>📊 Plan. tonaż: <strong id="planned-tonnage">0</strong> kg</span>
                 <span>✅ Status: <strong id="completion-status">Zaplanowano</strong></span>
             </div>
-            <div id="exercise-insights"></div>
             <div class="table-responsive">
                 <table>
                     <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Powt.</th><th>Ciężar</th><th>Objętość</th><th>RPE</th><th></th></tr></thead>
@@ -114,15 +163,19 @@
                 </table>
             </div>
             <div style="text-align:right; font-size:1.2rem; margin:16px 0;">💪 Obciążenie: <span id="total-volume">0</span> kg</div>
+            
+            <div style="margin: 12px 0;">
+                <label>📝 Notatki: <textarea id="workout-notes" rows="2" style="width:100%; border-radius:16px;"></textarea></label>
+            </div>
+            
             <button class="btn" id="add-exercise-btn">➕ Dodaj ćwiczenie</button>
-            <div id="add-exercise-form" style="margin-top:14px; background:#f1f5f9; padding:14px; border-radius:20px; display:none;">
+            <div id="add-exercise-form" class="panel-light" style="margin-top:14px; display:none;">
                 <strong>Dodaj ćwiczenie:</strong>
-                <div style="display:flex; flex-wrap:wrap; gap:6px; margin:10px 0;">
-                    <span class="preset" data-preset="Wyciskanie sztangi leżąc">Wyciskanie</span>
-                    <span class="preset" data-preset="Przysiad ze sztangą">Przysiad</span>
-                    <span class="preset" data-preset="Martwy ciąg">Martwy ciąg</span>
-                    <span class="preset" data-preset="Wiosłowanie sztangą">Wiosłowanie</span>
+                <div class="search-box">
+                    <input type="text" id="exercise-search" placeholder="🔍 Szukaj ćwiczenia..." style="width:100%;">
                 </div>
+                <div id="presets-container" style="display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; max-height:200px; overflow-y:auto;">
+                    </div>
                 <div style="display:flex; gap:8px;">
                     <input type="text" id="custom-exercise-name" placeholder="Własne" style="flex:2">
                     <button class="btn btn-primary" id="add-custom-exercise">Dodaj</button>
@@ -139,22 +192,20 @@
         </div>
     </div>
 
-    <!-- PANEL PLANU TYGODNIA -->
     <div id="weekly-panel" class="panel">
-        <h3>🗓️ Plan tygodnia</h3>
-        <p style="margin-bottom:14px;">Ustaw typ i szablon dla każdego dnia.</p>
+        <h3>🗓️ Plan dla obecnego tygodnia</h3>
+        <p>Zaplanuj aktywności na bieżące dni.</p>
         <div id="weekly-plan-container" style="margin:16px 0; display:grid; gap:12px;"></div>
         <button class="btn btn-primary" id="save-weekly-template">💾 Zapisz plan</button>
     </div>
 
-    <!-- PANEL SZABLONÓW -->
     <div id="templates-panel" class="panel">
         <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
             <h3>📋 Szablony</h3>
             <button class="btn btn-primary" id="create-template-btn">➕ Nowy szablon</button>
         </div>
         <div id="templates-list"></div>
-        <div id="template-form" style="display:none; margin-top:16px; background:#f1f5f9; padding:16px; border-radius:20px;">
+        <div id="template-form" class="panel-light" style="display:none; margin-top:16px;">
             <h4 id="template-form-title">Nowy szablon</h4>
             <input type="hidden" id="edit-template-id">
             <label>Nazwa: <input type="text" id="template-name" style="width:180px;"></label>
@@ -169,23 +220,21 @@
                     <tbody></tbody>
                 </table>
             </div>
-            <button class="btn btn-sm" id="add-exercise-to-template">➕ Dodaj ćwiczenie</button>
+            <button class="btn btn-sm" id="add-exercise-to-template" style="margin-top:10px;">➕ Dodaj ćwiczenie</button>
             <div style="margin-top:18px;">
-                <button class="btn btn-primary" id="save-template-btn">Zapisz</button>
+                <button class="btn btn-primary" id="save-template-btn">Zapisz szablon</button>
                 <button class="btn" id="cancel-template-btn">Anuluj</button>
             </div>
         </div>
     </div>
 
-    <!-- PANEL CYKLU 4-TYGODNIOWEGO -->
     <div id="future-panel" class="panel">
         <h3>📅 Plan na 4 tygodnie</h3>
-        <p>Generuje od dziś kolejne 4 tygodnie z progresją. Nie nadpisuje wykonanych/pominiętych.</p>
+        <p>Generuje od dziś kolejne 4 tygodnie z progresją. Nie nadpisuje wykonanych.</p>
         <button class="btn btn-primary" id="generate-future-plan">🔄 Generuj plan</button>
         <div id="future-plan-container" style="margin-top:18px; overflow-x:auto;"></div>
     </div>
 
-    <!-- PANEL PROGRESU -->
     <div id="progress-panel" class="panel">
         <h3>📊 Progres ćwiczeń</h3>
         <select id="progress-exercise-select" class="btn" style="width:100%; margin-bottom:14px;"></select>
@@ -196,10 +245,9 @@
         <div class="chart-container"><canvas id="weight-chart"></canvas></div>
     </div>
 
-    <!-- PANEL REKORDÓW -->
     <div id="records-panel" class="panel">
         <h3>🏆 Osobiste rekordy (1RM)</h3>
-        <p style="margin-bottom:16px;">Wpisz swój najlepszy ciężar dla każdego ćwiczenia.</p>
+        <p>Wpisz swój najlepszy ciężar dla każdego ćwiczenia.</p>
         <div id="records-container" style="display:grid; gap:12px;"></div>
         <button class="btn btn-primary" id="save-records-btn">💾 Zapisz rekordy</button>
     </div>
@@ -209,9 +257,9 @@
     (function(){
         "use strict";
         // ---------- STAN ----------
-        let currentDate = new Date(2026, 3, 15);
+        let currentDate = new Date();
         let selectedDate = new Date(currentDate);
-        let workouts = {};                // status: 'planned', 'completed', 'skipped'
+        let workouts = {};                
         let exerciseHistory = {};         
         let weeklyTemplate = { 1:'strength', 2:'run', 3:'strength', 4:'home', 5:'strength', 6:'run', 0:'rest' };
         let templateAssignments = {};      
@@ -221,16 +269,25 @@
         let currentDisposition = 1.0;
         let progressChart = null, weeklyChart = null, weightChart = null;
         
-        // Dane użytkownika
-        let userHeight = 175;
-        let userWeight = 70;
-        let restingHR = 60;
+        let userHeight = 175, userWeight = 70, restingHR = 60;
         let personalRecords = {};
-        let weightHistory = {}; // data -> waga (kg)
+        let weightHistory = {};
+        let darkMode = false;
+        
+        let favoriteExercises = new Set(JSON.parse(localStorage.getItem('favExercises') || '[]'));
+        let reminderTime = localStorage.getItem('reminderTime') || '08:00';
+        let timerInterval = null;
+        
+        const allPresetExercises = [
+            "Wyciskanie sztangi leżąc", "Wyciskanie żołnierskie", "Dipy", "Podciąganie",
+            "Przyciąganie drążka wyciągu górnego", "Martwy ciąg", "Martwy ciąg o prostych nogach",
+            "Przysiad ze sztangą", "Przysiad na maszynie", "Hip thrust", "Przywodzenie ud",
+            "Odwodzenie ud", "Uginanie ramion z hantlami"
+        ];
         
         // ---------- LOCALSTORAGE ----------
         function loadData() {
-            const saved = localStorage.getItem('cykl_pro_full_v2');
+            const saved = localStorage.getItem('cykl_pro_serie');
             if(saved) {
                 try {
                     const data = JSON.parse(saved);
@@ -245,47 +302,114 @@
                     restingHR = data.restingHR || 60;
                     personalRecords = data.personalRecords || {};
                     weightHistory = data.weightHistory || {};
+                    darkMode = data.darkMode || false;
+                    reminderTime = data.reminderTime || '08:00';
                     Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; delete w.completed; });
                 } catch(e){}
             }
             if(templates.length === 0) createDefaultTemplates();
-            // USUWAMY DEMO DANE Z KWIETNIA
-            delete workouts['2026-04-08'];
-            delete workouts['2026-04-10'];
-            delete workouts['2026-04-12'];
-            delete workouts['2026-04-14'];
-            if(Object.keys(workouts).length === 0) {
-                // pusta baza – nic nie dodajemy
-            }
             document.getElementById('user-height').value = userHeight;
             document.getElementById('user-weight').value = userWeight;
             document.getElementById('resting-hr').value = restingHR;
             updateBMI();
-            saveData(); // zapisz po usunięciu
+            applyDarkMode();
+            saveData();
         }
         function saveData() {
-            localStorage.setItem('cykl_pro_full_v2', JSON.stringify({
+            localStorage.setItem('cykl_pro_serie', JSON.stringify({
                 workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, templateUsageCount,
-                userHeight, userWeight, restingHR, personalRecords, weightHistory
+                userHeight, userWeight, restingHR, personalRecords, weightHistory, darkMode, reminderTime
             }));
         }
         function createDefaultTemplates() {
             templates.push({
                 id: 'tpl1', name: 'Push A', progressionPercent: 5, progressionSessions: 3,
                 exercises: [
-                    { name: 'Wyciskanie sztangi leżąc', sets: 4, reps: 8, startWeight: 80, progressionPercent: null, progressionSessions: null },
-                    { name: 'Wyciskanie hantli skos', sets: 3, reps: 10, startWeight: 28, progressionPercent: null, progressionSessions: null }
+                    { name: 'Wyciskanie sztangi leżąc', sets: 4, reps: 8, startWeight: 80, actualSets: null },
+                    { name: 'Wyciskanie żołnierskie', sets: 3, reps: 10, startWeight: 40, actualSets: null }
                 ]
             });
             templates.push({
                 id: 'tpl2', name: 'Pull A', progressionPercent: 5, progressionSessions: 3,
                 exercises: [
-                    { name: 'Wiosłowanie sztangą', sets: 4, reps: 8, startWeight: 70, progressionPercent: null, progressionSessions: null },
-                    { name: 'Uginanie ramion ze sztangą', sets: 3, reps: 12, startWeight: 30, progressionPercent: null, progressionSessions: null }
+                    { name: 'Martwy ciąg', sets: 3, reps: 6, startWeight: 100, actualSets: null },
+                    { name: 'Podciąganie', sets: 3, reps: 6, startWeight: 0, actualSets: null }
                 ]
             });
             templateUsageCount = { 'tpl1': 0, 'tpl2': 0 };
         }
+
+        // DARK MODE
+        function applyDarkMode() {
+            document.body.classList.toggle('dark', darkMode);
+            document.getElementById('dark-mode-toggle').textContent = darkMode ? '☀️ Tryb jasny' : '🌙 Tryb ciemny';
+        }
+        document.getElementById('dark-mode-toggle').addEventListener('click', ()=>{
+            darkMode = !darkMode;
+            applyDarkMode();
+            saveData();
+        });
+
+        // BACKUP
+        document.getElementById('export-backup-btn').addEventListener('click', ()=>{
+            const backup = localStorage.getItem('cykl_pro_serie');
+            if (!backup) return alert('Brak danych.');
+            const blob = new Blob([backup], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `cykl_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        });
+        document.getElementById('import-backup-btn').addEventListener('click', ()=>{
+            document.getElementById('backup-file-input').click();
+        });
+        document.getElementById('backup-file-input').addEventListener('change', (e)=>{
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    localStorage.setItem('cykl_pro_serie', JSON.stringify(data));
+                    alert('✅ Zaimportowano. Strona się przeładuje.');
+                    location.reload();
+                } catch (ex) { alert('❌ Błędny plik.'); }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        // PRZYPOMNIENIA
+        document.getElementById('reminder-setup-btn').addEventListener('click', ()=>{
+            const newTime = prompt('Godzina przypomnienia (HH:MM):', reminderTime);
+            if (newTime && /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newTime)) {
+                reminderTime = newTime;
+                saveData();
+                alert('✅ Ustawiono na ' + reminderTime);
+            } else alert('Nieprawidłowy format.');
+        });
+        if ('Notification' in window) Notification.requestPermission();
+
+        // TIMER
+        document.getElementById('start-timer-btn').addEventListener('click', ()=>{
+            if (timerInterval) clearInterval(timerInterval);
+            let sec = parseInt(document.getElementById('timer-duration').value) || 90;
+            const disp = document.getElementById('timer-display');
+            timerInterval = setInterval(() => {
+                if (sec <= 0) {
+                    clearInterval(timerInterval); timerInterval = null;
+                    disp.textContent = 'Koniec!';
+                    if (Notification.permission === 'granted') new Notification('⏱️ Przerwa zakończona');
+                } else {
+                    disp.textContent = `${sec} s`;
+                    sec--;
+                }
+            }, 1000);
+        });
+        document.getElementById('stop-timer-btn').addEventListener('click', ()=>{
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            document.getElementById('timer-display').textContent = document.getElementById('timer-duration').value + ' s';
+        });
 
         // ---------- POMOCNICZE ----------
         function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -295,19 +419,12 @@
             const week1 = new Date(date.getFullYear(), 0, 4);
             return 1 + Math.round(((date - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
         }
-        function getMesocycleWeek(date) {
-            const week = getWeekNumber(date);
-            const micro = week % 4;
-            return micro === 0 ? 4 : micro;
-        }
+        function getMesocycleWeek(date) { const w = getWeekNumber(date); return w%4 === 0 ? 4 : w%4; }
         function updateCycleIndicator() {
-            const micro = getMesocycleWeek(selectedDate);
-            document.getElementById('cycle-indicator').innerHTML = `Mezocykl 1 • Tydzień ${micro}/4`;
-            return micro;
+            document.getElementById('cycle-indicator').innerHTML = `Mezocykl 1 • Tydzień ${getMesocycleWeek(selectedDate)}/4`;
         }
         function updateBMI() {
-            const h = userHeight / 100;
-            const bmi = (userWeight / (h * h)).toFixed(1);
+            const bmi = (userWeight / ((userHeight/100)**2)).toFixed(1);
             document.getElementById('bmi-display').textContent = bmi;
         }
 
@@ -322,35 +439,21 @@
             grid.innerHTML = '';
             const todayStr = formatDate(new Date()), selectedStr = formatDate(selectedDate);
             const today = new Date(); today.setHours(0,0,0,0);
-            
             for(let i=0; i<42; i++) {
                 const cellDate = new Date(startDate); cellDate.setDate(startDate.getDate() + i);
                 const dateStr = formatDate(cellDate);
                 const w = workouts[dateStr];
-                let status = null;
-                if (w) {
-                    if (cellDate < today && w.status === 'planned' && dateStr !== todayStr) {
-                        status = null;
-                    } else {
-                        status = w.status;
-                    }
-                }
+                let status = (w && (cellDate >= today || dateStr === todayStr || w.status !== 'planned')) ? w.status : null;
                 const cell = document.createElement('div');
-                cell.className = 'day-cell';
-                if (status) cell.classList.add(`status-${status}`);
+                cell.className = 'day-cell' + (status ? ` status-${status}` : '');
                 if(dateStr === todayStr) cell.classList.add('today');
                 if(dateStr === selectedStr) cell.classList.add('selected');
                 if(cellDate.getMonth() !== month) cell.style.opacity = '0.5';
                 cell.textContent = cellDate.getDate();
-                if (status) {
-                    const dot = document.createElement('span');
-                    dot.className = 'status-dot';
-                    cell.appendChild(dot);
-                }
+                if (status) { const d=document.createElement('span'); d.className='status-dot'; cell.appendChild(d); }
                 cell.addEventListener('click', ()=>{
                     selectedDate = new Date(cellDate);
-                    renderCalendar();
-                    updateCycleIndicator();
+                    renderCalendar(); updateCycleIndicator();
                     document.querySelector('[data-tab="workout"]').click();
                     renderWorkoutPanel();
                 });
@@ -358,293 +461,612 @@
             }
         }
 
-        // ---------- GENEROWANIE TRENINGU ----------
+        // ---------- GENEROWANIE ----------
         function generateWorkoutFromWeeklyPlan(date, usageCounts = null) {
-            const dayOfWeek = date.getDay();
-            const type = weeklyTemplate[dayOfWeek] || 'rest';
+            const dow = date.getDay(), type = weeklyTemplate[dow] || 'rest';
             if(type === 'strength') {
-                const tplId = templateAssignments[dayOfWeek];
+                const tplId = templateAssignments[dow];
                 if(tplId) {
-                    const tpl = templates.find(t => t.id === tplId);
+                    const tpl = templates.find(t=>t.id===tplId);
                     if(tpl) {
-                        const baseUsage = (usageCounts && usageCounts[tplId] !== undefined) ? usageCounts[tplId] : (templateUsageCount[tplId] || 0);
-                        const exercises = tpl.exercises.map((ex, idx) => {
-                            const progPerc = ex.progressionPercent ?? tpl.progressionPercent;
-                            const progSess = ex.progressionSessions ?? tpl.progressionSessions;
-                            const increaseCount = Math.floor(baseUsage / progSess);
-                            let weight = ex.startWeight;
-                            for(let i=0; i<increaseCount; i++) weight *= (1 + progPerc/100);
-                            weight = Math.round(weight / 2.5) * 2.5;
+                        const base = (usageCounts?.[tplId] ?? templateUsageCount[tplId]) || 0;
+                        const exs = tpl.exercises.map((ex,i)=>{
+                            const perc = ex.progressionPercent ?? tpl.progressionPercent;
+                            const sess = ex.progressionSessions ?? tpl.progressionSessions;
+                            let w = ex.startWeight;
+                            for(let j=0; j<Math.floor(base/sess); j++) w *= (1+perc/100);
+                            w = Math.round(w/2.5)*2.5;
+                            // Użyj zapisanych actualSets z szablonu lub domyślne
+                            const templateSets = ex.actualSets || Array(ex.sets).fill().map(()=>({reps:ex.reps, w:ex.startWeight, rpe:8}));
+                            // Przelicz ciężary w actualSets na podstawie progresji
+                            const newActualSets = templateSets.map(s => ({
+                                reps: s.reps,
+                                w: Math.round((s.w * (w / ex.startWeight)) / 2.5) * 2.5,
+                                rpe: s.rpe
+                            }));
                             return {
-                                id: ex.name+Date.now()+idx+Math.random(),
-                                name: ex.name,
-                                sets: ex.sets,
-                                plannedReps: ex.reps,
-                                plannedWeight: weight,
-                                actualSets: Array(ex.sets).fill().map(() => ({ reps: ex.reps, w: weight, rpe: 8 })),
+                                id: ex.name+Date.now()+i+Math.random(), name: ex.name,
+                                sets: ex.sets, plannedReps: ex.reps, plannedWeight: w,
+                                actualSets: newActualSets,
                                 templateExercise: true
                             };
                         });
-                        return { type:'strength', deload: false, templateId: tplId, exercises, status: 'planned' };
+                        return { type:'strength', deload:false, templateId:tplId, exercises:exs, status:'planned', notes:'' };
                     }
                 }
-                return { type:'strength', exercises: [], deload: false, status: 'planned' };
+                return { type:'strength', exercises:[], deload:false, status:'planned', notes:'' };
             } else if(type !== 'rest') {
-                const duration = (type==='run'?30:45)*60;
-                const avgHr = 140;
-                const loadScore = (duration/60) * (avgHr - restingHR);
-                return { type, duration, avgHr, loadScore, status: 'planned' };
+                const dur = (type==='run'?30:45)*60, hr = 140;
+                return { type, duration:dur, avgHr:hr, loadScore:(dur/60)*(hr-restingHR), status:'planned', notes:'' };
             }
-            return { type:'rest', status: 'planned' };
+            return { type:'rest', status:'planned', notes:'' };
         }
 
         function generateFutureFourWeeks() {
-            const startDate = new Date(currentDate);
-            startDate.setHours(0,0,0,0);
-            let simulatedUsage = { ...templateUsageCount };
-            for(let i=0; i<28; i++) {
-                const d = new Date(startDate);
-                d.setDate(startDate.getDate() + i);
-                const dateStr = formatDate(d);
-                const existing = workouts[dateStr];
-                if (!existing || existing.status === 'planned') {
-                    workouts[dateStr] = generateWorkoutFromWeeklyPlan(d, simulatedUsage);
-                    const workout = workouts[dateStr];
-                    if (workout.type === 'strength' && workout.templateId) {
-                        simulatedUsage[workout.templateId] = (simulatedUsage[workout.templateId] || 0) + 1;
-                    }
-                }
-            }
-            saveData();
-            renderCalendar();
-            renderFuturePlan();
-            alert('✅ Wygenerowano plan na 4 tygodnie od dziś z progresją.');
-        }
-        function renderFuturePlan() {
-            const container = document.getElementById('future-plan-container');
-            const start = new Date(currentDate);
-            let html = '<table style="min-width:700px;"><tr><th>Data</th><th>Dzień</th><th>Typ</th><th>Opis</th><th>Status</th></tr>';
+            const start = new Date(); start.setHours(0,0,0,0);
+            let sim = {...templateUsageCount};
             for(let i=0; i<28; i++) {
                 const d = new Date(start); d.setDate(start.getDate()+i);
-                const dateStr = formatDate(d);
-                const w = workouts[dateStr] || generateWorkoutFromWeeklyPlan(d);
-                const desc = w.type==='strength' ? (w.exercises?.map(e=>`${e.name} ${e.plannedWeight}kg`).join(', ')||'Brak') : (w.type==='run'?'Bieg':w.type==='home'?'Dom':'Odpoczynek');
-                const statusIcon = { planned: '🔵', completed: '🟢', skipped: '🔴' }[w.status] || '⚪';
-                html += `<tr class="clickable-row" data-date="${dateStr}">
-                    <td>${dateStr}</td><td>${['Nd','Pn','Wt','Śr','Cz','Pt','So'][d.getDay()]}</td><td>${w.type}</td><td>${desc}</td>
-                    <td>${statusIcon} ${w.status}</td>
-                </tr>`;
+                const ds = formatDate(d);
+                if(!workouts[ds] || workouts[ds].status==='planned') {
+                    workouts[ds] = generateWorkoutFromWeeklyPlan(d, sim);
+                    const w = workouts[ds];
+                    if(w.type==='strength' && w.templateId) sim[w.templateId] = (sim[w.templateId]||0)+1;
+                }
             }
-            html += '</table>';
-            container.innerHTML = html;
-            container.querySelectorAll('.clickable-row').forEach(row => {
-                row.addEventListener('click', () => {
-                    selectedDate = new Date(row.dataset.date + 'T12:00:00');
-                    renderCalendar();
-                    document.querySelector('[data-tab="workout"]').click();
-                    renderWorkoutPanel();
-                });
-            });
+            saveData(); renderCalendar(); renderFuturePlan();
+            alert('✅ Plan wygenerowany.');
+        }
+        function renderFuturePlan() {
+            const cont = document.getElementById('future-plan-container');
+            const start = new Date(currentDate);
+            let h = '<table><tr><th>Data</th><th>Dzień</th><th>Typ</th><th>Opis</th><th>Status</th></tr>';
+            for(let i=0; i<28; i++) {
+                const d = new Date(start); d.setDate(start.getDate()+i);
+                const ds = formatDate(d);
+                const w = workouts[ds] || generateWorkoutFromWeeklyPlan(d);
+                const desc = w.type==='strength' ? w.exercises?.map(e=>`${e.name} ${e.plannedWeight}kg`).join(', ') : (w.type==='run'?'Bieg':w.type==='home'?'Dom':'Odp.');
+                const ico = {planned:'🔵',completed:'🟢',skipped:'🔴'}[w.status]||'⚪';
+                h += `<tr class="clickable-row" data-date="${ds}"><td>${ds}</td><td>${['Nd','Pn','Wt','Śr','Cz','Pt','So'][d.getDay()]}</td><td>${w.type}</td><td>${desc}</td><td>${ico}</td></tr>`;
+            }
+            h += '</table>'; cont.innerHTML = h;
+            cont.querySelectorAll('.clickable-row').forEach(r=>r.addEventListener('click', ()=>{
+                selectedDate = new Date(r.dataset.date+'T12:00:00');
+                renderCalendar(); document.querySelector('[data-tab="workout"]').click(); renderWorkoutPanel();
+            }));
         }
 
-        // ---------- PANEL TRENINGU ----------
+        // ---------- TRENING ----------
         function renderWorkoutPanel() {
-            const dateStr = formatDate(selectedDate);
-            let workout = workouts[dateStr];
-            if (!workout) {
-                workout = generateWorkoutFromWeeklyPlan(selectedDate);
-                workouts[dateStr] = workout;
-                saveData();
-            }
+            const ds = formatDate(selectedDate);
+            let w = workouts[ds];
+            if(!w) { w = generateWorkoutFromWeeklyPlan(selectedDate); workouts[ds]=w; saveData(); }
             document.getElementById('selected-date-title').textContent = new Intl.DateTimeFormat('pl', {day:'numeric', month:'long', year:'numeric'}).format(selectedDate);
-            document.getElementById('deload-checkbox').checked = workout.deload || false;
-            const statusText = { planned: '📅 Zaplanowano', completed: '✅ Wykonano', skipped: '❌ Pominięto' };
-            document.getElementById('completion-status').textContent = statusText[workout.status] || 'Zaplanowano';
-            toggleWorkoutView(workout.type);
-            if(workout.type === 'strength') {
-                renderStrengthExercises(workout.exercises);
-            } else if(workout.type === 'run' || workout.type === 'home') {
-                document.getElementById('cardio-duration').value = workout.duration ? Math.round(workout.duration/60) : 30;
-                document.getElementById('cardio-hr').value = workout.avgHr || 140;
-                const loadScore = workout.loadScore || ((workout.duration/60) * (workout.avgHr - restingHR));
-                document.getElementById('load-score-display').textContent = `📊 Obciążenie: ${Math.round(loadScore)} pkt`;
+            document.getElementById('deload-checkbox').checked = w.deload||false;
+            document.getElementById('completion-status').textContent = {planned:'📅 Zaplanowano',completed:'✅ Wykonano',skipped:'❌ Pominięto'}[w.status]||'';
+            document.getElementById('workout-notes').value = w.notes || '';
+            toggleWorkoutView(w.type);
+            if(w.type==='strength') renderStrengthExercises(w.exercises);
+            else if(w.type==='run'||w.type==='home') {
+                document.getElementById('cardio-duration').value = w.duration? Math.round(w.duration/60) : 30;
+                document.getElementById('cardio-hr').value = w.avgHr||140;
+                document.getElementById('load-score-display').textContent = `📊 Obciążenie: ${Math.round((w.duration/60)*(w.avgHr-restingHR))} pkt`;
             }
             updateCycleIndicator();
         }
         function toggleWorkoutView(type) {
             document.getElementById('strength-view').style.display = type==='strength'?'block':'none';
-            document.getElementById('cardio-view').style.display = (type==='run' || type==='home')?'block':'none';
+            document.getElementById('cardio-view').style.display = (type==='run'||type==='home')?'block':'none';
         }
-        function renderStrengthExercises(exercises) {
-            const tbody = document.getElementById('exercises-tbody');
-            tbody.innerHTML = '';
-            let plannedTonnage = 0;
-            const dateStr = formatDate(selectedDate);
-            const workout = workouts[dateStr];
-            const isDeload = workout?.deload || false;
-            const deloadMult = isDeload ? 0.9 : 1.0;
-            exercises.forEach((ex, idx) => {
-                const sets = ex.sets || 3;
-                const baseWeight = ex.plannedWeight || 20;
-                const scaledWeight = Math.round(baseWeight * currentDisposition * deloadMult * 2) / 2;
-                const reps = ex.plannedReps || 8;
-                plannedTonnage += scaledWeight * reps * sets;
-                let volume = 0, avgRpe = null;
+        function renderStrengthExercises(exs) {
+            const tbody = document.getElementById('exercises-tbody'); tbody.innerHTML = '';
+            const w = workouts[formatDate(selectedDate)];
+            const deload = w?.deload ? 0.9 : 1;
+            let planTon = 0;
+            exs.forEach((ex,idx)=>{
+                const sets = ex.sets||3, reps = ex.plannedReps||8;
+                const weight = Math.round((ex.plannedWeight||20)*currentDisposition*deload*2)/2;
+                planTon += weight*reps*sets;
+                let vol=0, avgRpe=null;
                 if(ex.actualSets) {
-                    ex.actualSets.forEach(s => volume += s.w * s.reps);
-                    const rpes = ex.actualSets.map(s => s.rpe).filter(r => r != null);
+                    ex.actualSets.forEach(s=>vol+=s.w*s.reps);
+                    const rpes = ex.actualSets.map(s=>s.rpe).filter(r=>r!=null);
                     if(rpes.length) avgRpe = (rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1);
                 }
-                const record = personalRecords[ex.name];
-                const recordDisplay = record ? ` <span style="font-size:0.8rem; color:#64748b;">(🏆 ${record} kg)</span>` : '';
+                const rec = personalRecords[ex.name] ? ` <span style="font-size:0.8rem;">(🏆${personalRecords[ex.name]}kg)</span>`:'';
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>${ex.name}</strong>${recordDisplay}</td>
-                    <td><input type="number" class="editable sets-count" data-idx="${idx}" value="${sets}" min="1" step="1" style="width:60px"></td>
-                    <td><input type="number" class="editable planned-reps" data-idx="${idx}" value="${reps}" min="1" step="1" style="width:60px"></td>
-                    <td>
-                        <input type="number" class="editable planned-weight" data-idx="${idx}" value="${scaledWeight}" step="2.5" style="width:90px">
-                        <span class="plate-icon" data-weight="${scaledWeight}">🏋️</span>
-                    </td>
-                    <td>${volume} kg</td>
-                    <td>${avgRpe ? `<span class="rpe-badge">RPE ${avgRpe}</span>` : '-'}</td>
-                    <td>
-                        <button class="btn btn-sm edit-sets-btn" data-idx="${idx}">✏️ Serie</button>
-                        <button class="btn btn-sm remove-exercise" data-idx="${idx}">🗑️</button>
-                    </td>
-                `;
+                row.innerHTML = `<td><strong>${ex.name}</strong>${rec}</td>
+                    <td><div class="number-control"><button class="btn-sm set-down" data-idx="${idx}">−</button><input class="editable sets-count" data-idx="${idx}" value="${sets}" min="1" style="width:50px"><button class="btn-sm set-up" data-idx="${idx}">+</button></div></td>
+                    <td><div class="number-control"><button class="btn-sm rep-down" data-idx="${idx}">−</button><input class="editable planned-reps" data-idx="${idx}" value="${reps}" min="1" style="width:50px"><button class="btn-sm rep-up" data-idx="${idx}">+</button></div></td>
+                    <td><div class="number-control"><button class="btn-sm weight-down" data-idx="${idx}">−</button><input class="editable planned-weight" data-idx="${idx}" value="${weight}" step="2.5" style="width:70px"><button class="btn-sm weight-up" data-idx="${idx}">+</button></div></td>
+                    <td>${vol} kg</td><td>${avgRpe?`<span class="rpe-badge">RPE ${avgRpe}</span>`:'-'}</td>
+                    <td><button class="btn btn-sm edit-sets-btn" data-idx="${idx}">✏️ Serie</button><button class="btn btn-sm remove-exercise" data-idx="${idx}">🗑️</button></td>`;
                 tbody.appendChild(row);
             });
-            document.getElementById('planned-tonnage').textContent = plannedTonnage.toFixed(0);
-            document.querySelectorAll('.edit-sets-btn').forEach(b => b.addEventListener('click', (e)=> openSetEditor(parseInt(b.dataset.idx))));
-            document.querySelectorAll('.remove-exercise').forEach(b => b.addEventListener('click', (e)=> {
-                workouts[dateStr].exercises.splice(parseInt(b.dataset.idx),1);
+            document.getElementById('planned-tonnage').textContent = planTon.toFixed(0);
+            
+            // Reakcje na zmianę ilości serii/powt./ciężaru
+            document.querySelectorAll('.set-up, .set-down').forEach(b=>b.addEventListener('click',(e)=>{
+                const idx = b.dataset.idx; const inp = document.querySelector(`.sets-count[data-idx="${idx}"]`);
+                inp.value = b.classList.contains('set-up') ? +inp.value+1 : Math.max(1,+inp.value-1);
+                inp.dispatchEvent(new Event('change'));
+            }));
+            document.querySelectorAll('.rep-up, .rep-down').forEach(b=>b.addEventListener('click',(e)=>{
+                const idx = b.dataset.idx; const inp = document.querySelector(`.planned-reps[data-idx="${idx}"]`);
+                inp.value = b.classList.contains('rep-up') ? +inp.value+1 : Math.max(1,+inp.value-1);
+                inp.dispatchEvent(new Event('change'));
+            }));
+            document.querySelectorAll('.weight-up, .weight-down').forEach(b=>b.addEventListener('click',(e)=>{
+                const idx = b.dataset.idx; const inp = document.querySelector(`.planned-weight[data-idx="${idx}"]`);
+                let v = parseFloat(inp.value)||0;
+                v = b.classList.contains('weight-up') ? v+2.5 : Math.max(0,v-2.5);
+                inp.value = Math.round(v*2)/2;
+                inp.dispatchEvent(new Event('change'));
+            }));
+
+            document.querySelectorAll('.sets-count, .planned-reps, .planned-weight').forEach(i=>i.addEventListener('change', function(){
+                const ex = w.exercises[this.dataset.idx];
+                if(this.classList.contains('sets-count')) {
+                    const newSetsCount = +this.value;
+                    ex.sets = newSetsCount;
+                    if (!ex.actualSets) ex.actualSets = [];
+                    if (ex.actualSets.length > newSetsCount) {
+                        ex.actualSets = ex.actualSets.slice(0, newSetsCount);
+                    } else {
+                        while (ex.actualSets.length < newSetsCount) {
+                            const lastSet = ex.actualSets.length > 0 ? ex.actualSets[ex.actualSets.length - 1] : { reps: ex.plannedReps, w: ex.plannedWeight, rpe: 8 };
+                            ex.actualSets.push({ ...lastSet });
+                        }
+                    }
+                }
+                else if(this.classList.contains('planned-reps')) {
+                    ex.plannedReps = +this.value;
+                    if (ex.actualSets) ex.actualSets.forEach(s => s.reps = ex.plannedReps);
+                }
+                else {
+                    ex.plannedWeight = parseFloat(this.value);
+                    if (ex.actualSets) ex.actualSets.forEach(s => s.w = ex.plannedWeight);
+                }
                 renderWorkoutPanel(); saveData();
+            }));
+
+            document.querySelectorAll('.edit-sets-btn').forEach(b=>b.addEventListener('click',()=>openSetEditor(b.dataset.idx)));
+            document.querySelectorAll('.remove-exercise').forEach(b=>b.addEventListener('click',()=>{
+                w.exercises.splice(b.dataset.idx,1); renderWorkoutPanel(); saveData();
             }));
             calculateTotalVolume();
         }
         function openSetEditor(idx) {
-            const dateStr = formatDate(selectedDate);
-            const ex = workouts[dateStr].exercises[idx];
-            const sets = ex.actualSets || Array(ex.sets).fill({reps: ex.plannedReps, w: ex.plannedWeight, rpe: 8});
-            let html = `<h4>${ex.name}</h4>`;
+            const ex = workouts[formatDate(selectedDate)].exercises[idx];
+            const sets = ex.actualSets || Array(ex.sets).fill({reps:ex.plannedReps, w:ex.plannedWeight, rpe:8});
+            let html = `<h4 style="margin-bottom:12px;">${ex.name}</h4>`;
             sets.forEach((s,i)=> {
-                html += `<div style="margin-bottom:8px;">Seria ${i+1}: 
-                    <input id="s-${i}-r" value="${s.reps}" style="width:60px;" type="number" step="1"> powt × 
-                    <input id="s-${i}-w" value="${s.w}" style="width:90px;" type="number" step="2.5"> kg 
-                    <label> RPE: <input id="s-${i}-rpe" value="${s.rpe || 8}" style="width:60px;" type="number" min="1" max="10" step="0.5"></label>
+                html += `<div class="series-editor-row">Seria ${i+1}:
+                    <div class="number-control"><button class="btn-sm ser-rep-down" data-ser="${i}">−</button><input id="s-${i}-r" value="${s.reps}" style="width:50px"><button class="btn-sm ser-rep-up" data-ser="${i}">+</button></div> powt
+                    <div class="number-control"><button class="btn-sm ser-w-down" data-ser="${i}">−</button><input id="s-${i}-w" value="${s.w}" style="width:70px" step="2.5"><button class="btn-sm ser-w-up" data-ser="${i}">+</button></div> kg
+                    RPE: <div class="number-control"><button class="btn-sm ser-rpe-down" data-ser="${i}">−</button><input id="s-${i}-rpe" value="${s.rpe||8}" style="width:50px" step="0.5" min="1" max="10"><button class="btn-sm ser-rpe-up" data-ser="${i}">+</button></div>
                 </div>`;
             });
-            html += `<button id="save-sets" class="btn btn-primary">Zapisz</button>`;
+            html += `<div style="margin-top:16px; text-align:right;"><button class="btn btn-primary" id="save-sets">Zapisz</button></div>`;
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
             const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed; top:20%; left:5%; right:5%; background:#fff; padding:20px; border-radius:24px; z-index:1000; box-shadow:0 10px 25px rgba(0,0,0,0.2); max-height:80vh; overflow-y:auto;';
+            modal.className = 'modal-box';
             modal.innerHTML = html;
-            document.body.appendChild(modal);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Podpięcie przycisków +/-
+            modal.querySelectorAll('.ser-rep-up, .ser-rep-down').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    const ser = b.dataset.ser;
+                    const inp = modal.querySelector(`#s-${ser}-r`);
+                    inp.value = b.classList.contains('ser-rep-up') ? +inp.value + 1 : Math.max(1, +inp.value - 1);
+                });
+            });
+            modal.querySelectorAll('.ser-w-up, .ser-w-down').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    const ser = b.dataset.ser;
+                    const inp = modal.querySelector(`#s-${ser}-w`);
+                    let v = parseFloat(inp.value) || 0;
+                    v = b.classList.contains('ser-w-up') ? v + 2.5 : Math.max(0, v - 2.5);
+                    inp.value = Math.round(v * 2) / 2;
+                });
+            });
+            modal.querySelectorAll('.ser-rpe-up, .ser-rpe-down').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    const ser = b.dataset.ser;
+                    const inp = modal.querySelector(`#s-${ser}-rpe`);
+                    let v = parseFloat(inp.value) || 8;
+                    v = b.classList.contains('ser-rpe-up') ? Math.min(10, v + 0.5) : Math.max(1, v - 0.5);
+                    inp.value = Math.round(v * 2) / 2;
+                });
+            });
             document.getElementById('save-sets').onclick = ()=>{
                 const newSets = [];
                 for(let i=0;i<sets.length;i++) {
                     newSets.push({
-                        reps: +document.getElementById(`s-${i}-r`).value,
-                        w: +document.getElementById(`s-${i}-w`).value,
-                        rpe: parseFloat(document.getElementById(`s-${i}-rpe`).value)
+                        reps: +modal.querySelector(`#s-${i}-r`).value,
+                        w: +modal.querySelector(`#s-${i}-w`).value,
+                        rpe: parseFloat(modal.querySelector(`#s-${i}-rpe`).value)
                     });
                 }
-                ex.actualSets = newSets;
-                modal.remove();
-                renderWorkoutPanel();
+                ex.actualSets = newSets; 
+                overlay.remove(); 
+                renderWorkoutPanel(); 
                 saveData();
             };
         }
         function calculateTotalVolume() {
             const w = workouts[formatDate(selectedDate)];
-            let total = 0;
-            if(w?.exercises) w.exercises.forEach(ex => { if(ex.actualSets) ex.actualSets.forEach(s => total += s.w * s.reps); });
-            document.getElementById('total-volume').textContent = total;
+            let tot=0; w?.exercises?.forEach(e=>e.actualSets?.forEach(s=>tot+=s.w*s.reps));
+            document.getElementById('total-volume').textContent = tot;
         }
 
-        // ---------- ZAPIS WAGI ----------
-        function saveWeightForToday() {
-            const todayStr = formatDate(new Date());
-            weightHistory[todayStr] = userWeight;
-            saveData();
-            alert(`✅ Waga ${userWeight} kg zapisana na dziś.`);
-            renderWeightChart();
-        }
-
-        // ---------- ZAPIS TRENINGU ----------
+        // ---------- ZAPIS ----------
         document.getElementById('complete-workout-btn').addEventListener('click', ()=>{
-            const dateStr = formatDate(selectedDate);
-            const w = workouts[dateStr];
-            if(!w) return;
+            const ds = formatDate(selectedDate); const w = workouts[ds]; if(!w) return;
             w.deload = document.getElementById('deload-checkbox').checked;
             w.status = 'completed';
-            if(w.type !== 'strength') {
-                w.duration = parseInt(document.getElementById('cardio-duration').value)*60;
-                w.avgHr = parseInt(document.getElementById('cardio-hr').value);
-                w.loadScore = (w.duration/60) * (w.avgHr - restingHR);
-            }
+            w.notes = document.getElementById('workout-notes').value;
+            if(w.type!=='strength') { w.duration = +document.getElementById('cardio-duration').value*60; w.avgHr = +document.getElementById('cardio-hr').value; }
             if(w.templateId && w.type==='strength' && !w.deload) {
                 templateUsageCount[w.templateId] = (templateUsageCount[w.templateId]||0)+1;
+                adaptFuture(w.templateId, w.exercises);
             }
-            updateHistoryFromWorkout(new Date(dateStr));
-            saveData(); renderCalendar();
-            alert('✅ Trening wykonany!');
-            renderWorkoutPanel();
+            updateHistory(new Date(ds)); saveData(); renderCalendar(); alert('✅ Zapisano!'); renderWorkoutPanel();
         });
         document.getElementById('skip-workout-btn').addEventListener('click', ()=>{
-            const dateStr = formatDate(selectedDate);
-            const w = workouts[dateStr];
-            if(!w) return;
-            w.status = 'skipped';
-            saveData(); renderCalendar();
-            alert('🚫 Trening pominięty.');
-            renderWorkoutPanel();
+            const w = workouts[formatDate(selectedDate)]; if(!w) return;
+            w.status = 'skipped'; saveData(); renderCalendar(); alert('🚫 Pominięto'); renderWorkoutPanel();
         });
-        function updateHistoryFromWorkout(date) {
-            const w = workouts[formatDate(date)];
-            if(!w || w.type!=='strength') return;
-            w.exercises.forEach(ex => {
-                const id = ex.name;
-                if(!exerciseHistory[id]) exerciseHistory[id] = [];
-                let maxW=0, e1rm=0, vol=0, rpeSum=0, rpeCount=0;
-                if(ex.actualSets) ex.actualSets.forEach(s=>{
-                    if(s.w>maxW) maxW=s.w;
-                    const e = s.w*(1+s.reps/30); if(e>e1rm) e1rm=e;
-                    vol += s.w*s.reps;
-                    if(s.rpe) { rpeSum += s.rpe; rpeCount++; }
-                });
-                exerciseHistory[id].push({ 
-                    date: formatDate(date), maxWeight: maxW, e1rm: Math.round(e1rm*10)/10, volume: vol,
-                    avgRpe: rpeCount ? Math.round((rpeSum/rpeCount)*10)/10 : null
+        function adaptFuture(tid, exs) {
+            Object.keys(workouts).filter(d=>workouts[d].status==='planned'&&workouts[d].templateId===tid).sort().forEach(ds=>{
+                const fw = workouts[ds];
+                exs.forEach(ex=>{
+                    const fe = fw.exercises.find(e=>e.name===ex.name); if(!fe) return;
+                    const rpes = ex.actualSets?.map(s=>s.rpe).filter(r=>r!=null)||[];
+                    const avg = rpes.length ? rpes.reduce((a,b)=>a+b,0)/rpes.length : 8;
+                    if(avg<7.5) { if(fe.plannedReps<12) fe.plannedReps+=1; else { fe.plannedWeight+=2.5; fe.plannedReps=8; } }
+                    else if(avg>8.5) { if(fe.plannedReps>6) fe.plannedReps-=1; else { fe.plannedWeight=Math.max(0,fe.plannedWeight-2.5); fe.plannedReps=8; } }
+                    fe.actualSets = Array(fe.sets).fill().map(()=>({reps:fe.plannedReps, w:fe.plannedWeight, rpe:8}));
                 });
             });
         }
+        function updateHistory(date) {
+            const w = workouts[formatDate(date)]; if(!w||w.type!=='strength') return;
+            w.exercises.forEach(e=>{
+                if(!exerciseHistory[e.name]) exerciseHistory[e.name]=[];
+                let max=0, e1rm=0, vol=0, sum=0, cnt=0;
+                e.actualSets?.forEach(s=>{ if(s.w>max) max=s.w; const rm=s.w*(1+s.reps/30); if(rm>e1rm) e1rm=rm; vol+=s.w*s.reps; if(s.rpe){sum+=s.rpe; cnt++;} });
+                exerciseHistory[e.name].push({date:formatDate(date), maxWeight:max, e1rm:Math.round(e1rm*10)/10, volume:vol, avgRpe:cnt?Math.round(sum/cnt*10)/10:null});
+            });
+        }
+
+        // ---------- DODAWANIE ĆWICZEŃ ----------
+        function renderPresets(filterText = '') {
+            const container = document.getElementById('presets-container');
+            const favs = Array.from(favoriteExercises);
+            const others = allPresetExercises.filter(e => !favoriteExercises.has(e));
+            let filteredFav = favs.filter(e => e.toLowerCase().includes(filterText.toLowerCase()));
+            let filteredOthers = others.filter(e => e.toLowerCase().includes(filterText.toLowerCase()));
+            let html = '';
+            filteredFav.forEach(name => html += `<span class="preset" data-preset="${name}" style="display:flex; align-items:center; cursor:pointer;">⭐ ${name}</span>`);
+            filteredOthers.forEach(name => html += `<span class="preset" data-preset="${name}" style="display:flex; align-items:center; cursor:pointer;"><span class="favorite-star" data-exercise="${name}">☆</span> ${name}</span>`);
+            container.innerHTML = html;
+            container.querySelectorAll('.favorite-star').forEach(star => {
+                star.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const ex = star.dataset.exercise;
+                    if (favoriteExercises.has(ex)) favoriteExercises.delete(ex);
+                    else favoriteExercises.add(ex);
+                    localStorage.setItem('favExercises', JSON.stringify(Array.from(favoriteExercises)));
+                    renderPresets(document.getElementById('exercise-search').value);
+                });
+            });
+            container.querySelectorAll('.preset').forEach(p => p.addEventListener('click', () => addExercise(p.dataset.preset)));
+        }
+        document.getElementById('add-exercise-btn').addEventListener('click', ()=>{
+            document.getElementById('add-exercise-form').style.display='block';
+            renderPresets();
+        });
+        document.getElementById('exercise-search').addEventListener('input', (e) => renderPresets(e.target.value));
+        document.getElementById('add-custom-exercise').addEventListener('click', ()=>{
+            const n = document.getElementById('custom-exercise-name').value.trim();
+            if(n) addExercise(n);
+        });
+        function addExercise(name) {
+            const d = formatDate(selectedDate);
+            if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, status:'planned', notes:'' };
+            workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedReps:8, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20,rpe:8}), templateExercise: false });
+            renderWorkoutPanel(); saveData();
+            document.getElementById('add-exercise-form').style.display='none';
+        }
+
+        // ---------- SZABLONY ----------
+        function getAllKnownExercises() {
+            const s = new Set([...allPresetExercises, ...Object.keys(exerciseHistory), ...Array.from(favoriteExercises)]);
+            templates.forEach(t=>t.exercises.forEach(e=>s.add(e.name)));
+            return Array.from(s).sort();
+        }
+
+        function buildExerciseSelectorHtml(currentVal) {
+            const allEx = getAllKnownExercises();
+            let isKnown = currentVal && allEx.includes(currentVal);
+            let options = allEx.map(e => `<option value="${e}" ${e===currentVal?'selected':''}>${e}</option>`).join('');
+            return `<select class="tpl-ex-name-sel" style="width:130px; margin-bottom:4px;">
+                        <option value="" ${!currentVal?'selected':''}>--Wybierz--</option>
+                        ${options}
+                        <option value="__NEW__" ${!isKnown && currentVal ? 'selected' : ''}>➕ Inne...</option>
+                    </select>
+                    <input type="text" class="tpl-ex-name-inp" value="${!isKnown && currentVal ? currentVal : ''}" style="display:${!isKnown && currentVal ? 'block' : 'none'}; width:130px;">`;
+        }
+
+        function renderTemplatesPanel() {
+            const list = document.getElementById('templates-list');
+            list.innerHTML = templates.map(t => `
+                <div style="border:1px solid #ccc; border-radius:16px; padding:14px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <strong>${t.name}</strong> <span>📈 +${t.progressionPercent}% / ${t.progressionSessions} treningi | Wykonano: ${templateUsageCount[t.id]||0}</span>
+                        <div><button class="btn btn-sm edit-template" data-id="${t.id}">✏️</button><button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button></div>
+                    </div>
+                    <ul>${t.exercises.map(e=>`<li>${e.name}: ${e.sets}x${e.reps} @ ${e.startWeight}kg</li>`).join('')}</ul>
+                </div>
+            `).join('');
+            document.querySelectorAll('.edit-template').forEach(b => b.addEventListener('click', ()=> editTemplate(b.dataset.id)));
+            document.querySelectorAll('.delete-template').forEach(b => b.addEventListener('click', ()=> {
+                templates = templates.filter(t => t.id !== b.dataset.id);
+                saveData(); renderTemplatesPanel(); renderWeeklyPanel();
+            }));
+        }
+
+        document.querySelector('#template-exercises-table').addEventListener('change', function(e) {
+            if(e.target.classList.contains('tpl-ex-name-sel')) {
+                const inp = e.target.nextElementSibling;
+                if(e.target.value === '__NEW__') {
+                    inp.style.display = 'block'; inp.focus();
+                } else {
+                    inp.style.display = 'none'; inp.value = e.target.value;
+                }
+            }
+        });
+
+        function editTemplate(id) {
+            const tpl = templates.find(t => t.id === id); if(!tpl) return;
+            document.getElementById('template-form-title').textContent = 'Edytuj szablon';
+            document.getElementById('edit-template-id').value = id;
+            document.getElementById('template-name').value = tpl.name;
+            document.getElementById('template-progress-percent').value = tpl.progressionPercent;
+            document.getElementById('template-progress-sessions').value = tpl.progressionSessions;
+            renderTemplateExercisesTable(tpl.exercises);
+            document.getElementById('template-form').style.display = 'block';
+        }
+
+        function renderTemplateExercisesTable(exercises) {
+            const tbody = document.querySelector('#template-exercises-table tbody'); tbody.innerHTML = '';
+            exercises.forEach((ex, idx) => {
+                const row = document.createElement('tr');
+                // Przechowujemy tymczasowo actualSets na wierszu tabeli HTML
+                row._actualSets = ex.actualSets ? JSON.parse(JSON.stringify(ex.actualSets)) : null; 
+                
+                row.innerHTML = `<td>${buildExerciseSelectorHtml(ex.name)}</td>
+                    <td><div class="number-control"><button class="btn-sm tpl-set-down">−</button><input type="number" value="${ex.sets}" min="1" class="tpl-ex-sets" style="width:60px"><button class="btn-sm tpl-set-up">+</button></div></td>
+                    <td><div class="number-control"><button class="btn-sm tpl-rep-down">−</button><input type="number" value="${ex.reps}" min="1" class="tpl-ex-reps" style="width:60px"><button class="btn-sm tpl-rep-up">+</button></div></td>
+                    <td><div class="number-control"><button class="btn-sm tpl-w-down">−</button><input type="number" value="${ex.startWeight}" step="2.5" class="tpl-ex-weight" style="width:80px"><button class="btn-sm tpl-w-up">+</button></div></td>
+                    <td><input type="number" placeholder="+%" class="tpl-ex-prog-perc" value="${ex.progressionPercent||''}" style="width:60px;"><input type="number" placeholder="co" class="tpl-ex-prog-sess" value="${ex.progressionSessions||''}" style="width:60px;"></td>
+                    <td><button class="btn btn-sm edit-tpl-series-btn" data-idx="${idx}">✏️ Serie</button><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`;
+                tbody.appendChild(row);
+                
+                // Podpięcie przycisków +/-
+                const setInp = row.querySelector('.tpl-ex-sets');
+                row.querySelector('.tpl-set-up').addEventListener('click', ()=> setInp.value = +setInp.value + 1);
+                row.querySelector('.tpl-set-down').addEventListener('click', ()=> setInp.value = Math.max(1, +setInp.value - 1));
+                const repInp = row.querySelector('.tpl-ex-reps');
+                row.querySelector('.tpl-rep-up').addEventListener('click', ()=> repInp.value = +repInp.value + 1);
+                row.querySelector('.tpl-rep-down').addEventListener('click', ()=> repInp.value = Math.max(1, +repInp.value - 1));
+                const wInp = row.querySelector('.tpl-ex-weight');
+                row.querySelector('.tpl-w-up').addEventListener('click', ()=> { let v = parseFloat(wInp.value)||0; v += 2.5; wInp.value = Math.round(v*2)/2; });
+                row.querySelector('.tpl-w-down').addEventListener('click', ()=> { let v = parseFloat(wInp.value)||0; v = Math.max(0, v-2.5); wInp.value = Math.round(v*2)/2; });
+                row.querySelector('.edit-tpl-series-btn').addEventListener('click', ()=> editTemplateSeries(idx));
+                row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> row.remove());
+            });
+        }
+
+        function editTemplateSeries(idx) {
+            const row = document.querySelectorAll('#template-exercises-table tbody tr')[idx];
+            const sel = row.querySelector('.tpl-ex-name-sel');
+            const name = sel.value === '__NEW__' ? row.querySelector('.tpl-ex-name-inp').value : sel.value;
+            const setsCount = parseInt(row.querySelector('.tpl-ex-sets').value) || 3;
+            const defaultReps = parseInt(row.querySelector('.tpl-ex-reps').value) || 8;
+            const defaultWeight = parseFloat(row.querySelector('.tpl-ex-weight').value) || 20;
+            
+            // Pobieramy tymczasowe zapisy na wierszu tabeli
+            let sets = row._actualSets;
+            
+            // Generujemy default jeśli puste
+            if (!sets) {
+                sets = Array(setsCount).fill(null).map(() => ({reps: defaultReps, w: defaultWeight, rpe: 8}));
+            }
+            
+            // Dostosowujemy długość do tego, co użytkownik na zewnątrz ustawił jako docelową ilość serii
+            if (sets.length > setsCount) {
+                sets = sets.slice(0, setsCount);
+            } else {
+                while (sets.length < setsCount) {
+                    const last = sets.length > 0 ? sets[sets.length - 1] : {reps: defaultReps, w: defaultWeight, rpe: 8};
+                    sets.push({...last});
+                }
+            }
+
+            let html = `<h4 style="margin-bottom:12px;">${name || 'Nieznane ćwiczenie'} – edycja serii</h4>`;
+            sets.forEach((s, i) => {
+                html += `<div class="series-editor-row">Seria ${i+1}:
+                    <div class="number-control"><button class="btn-sm tplser-rep-down" data-ser="${i}">−</button><input id="tpl-s-${i}-r" value="${s.reps}" style="width:50px"><button class="btn-sm tplser-rep-up" data-ser="${i}">+</button></div> powt 
+                    <div class="number-control"><button class="btn-sm tplser-w-down" data-ser="${i}">−</button><input id="tpl-s-${i}-w" value="${s.w}" style="width:70px" step="2.5"><button class="btn-sm tplser-w-up" data-ser="${i}">+</button></div> kg
+                    RPE: <div class="number-control"><button class="btn-sm tplser-rpe-down" data-ser="${i}">−</button><input id="tpl-s-${i}-rpe" value="${s.rpe||8}" style="width:50px" step="0.5" min="1" max="10"><button class="btn-sm tplser-rpe-up" data-ser="${i}">+</button></div>
+                </div>`;
+            });
+            html += `<div style="margin-top:16px; text-align:right;"><button class="btn btn-primary" id="save-tpl-series">Zapisz</button></div>`;
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            const modal = document.createElement('div');
+            modal.className = 'modal-box';
+            modal.innerHTML = html;
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Podpięcie +/-
+            modal.querySelectorAll('.tplser-rep-up, .tplser-rep-down').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    const ser = b.dataset.ser;
+                    const inp = modal.querySelector(`#tpl-s-${ser}-r`);
+                    inp.value = b.classList.contains('tplser-rep-up') ? +inp.value + 1 : Math.max(1, +inp.value - 1);
+                });
+            });
+            modal.querySelectorAll('.tplser-w-up, .tplser-w-down').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    const ser = b.dataset.ser;
+                    const inp = modal.querySelector(`#tpl-s-${ser}-w`);
+                    let v = parseFloat(inp.value) || 0;
+                    v = b.classList.contains('tplser-w-up') ? v + 2.5 : Math.max(0, v - 2.5);
+                    inp.value = Math.round(v * 2) / 2;
+                });
+            });
+            modal.querySelectorAll('.tplser-rpe-up, .tplser-rpe-down').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    const ser = b.dataset.ser;
+                    const inp = modal.querySelector(`#tpl-s-${ser}-rpe`);
+                    let v = parseFloat(inp.value) || 8;
+                    v = b.classList.contains('tplser-rpe-up') ? Math.min(10, v + 0.5) : Math.max(1, v - 0.5);
+                    inp.value = Math.round(v * 2) / 2;
+                });
+            });
+            document.getElementById('save-tpl-series').onclick = () => {
+                const newSets = [];
+                for (let i=0; i<sets.length; i++) {
+                    newSets.push({
+                        reps: +modal.querySelector(`#tpl-s-${i}-r`).value,
+                        w: +modal.querySelector(`#tpl-s-${i}-w`).value,
+                        rpe: parseFloat(modal.querySelector(`#tpl-s-${i}-rpe`).value)
+                    });
+                }
+                
+                // Zapisujemy spowrotem zmienione serie do atrybutu HTML
+                row._actualSets = newSets;
+                overlay.remove();
+            };
+        }
+
+        function getTemplateExercisesFromForm() {
+            return Array.from(document.querySelectorAll('#template-exercises-table tbody tr')).map(row => {
+                const sel = row.querySelector('.tpl-ex-name-sel');
+                const inp = row.querySelector('.tpl-ex-name-inp');
+                const exName = sel.value === '__NEW__' ? inp.value.trim() : sel.value;
+                return {
+                    name: exName,
+                    sets: +row.querySelector('.tpl-ex-sets').value,
+                    reps: +row.querySelector('.tpl-ex-reps').value,
+                    startWeight: parseFloat(row.querySelector('.tpl-ex-weight').value),
+                    progressionPercent: row.querySelector('.tpl-ex-prog-perc').value ? parseFloat(row.querySelector('.tpl-ex-prog-perc').value) : null,
+                    progressionSessions: row.querySelector('.tpl-ex-prog-sess').value ? parseInt(row.querySelector('.tpl-ex-prog-sess').value) : null,
+                    actualSets: row._actualSets || null // Zapisuje z bufora
+                };
+            }).filter(e => e.name);
+        }
+
+        document.getElementById('create-template-btn').addEventListener('click', ()=>{
+            document.getElementById('edit-template-id').value = '';
+            document.getElementById('template-name').value = '';
+            renderTemplateExercisesTable([]);
+            document.getElementById('template-form').style.display = 'block';
+        });
+
+        document.getElementById('add-exercise-to-template').addEventListener('click', ()=>{
+            const tbody = document.querySelector('#template-exercises-table tbody');
+            const row = document.createElement('tr');
+            row._actualSets = null; // Czysty bufor dla nowego ćwiczenia w nowym szablonie
+            
+            row.innerHTML = `<td>${buildExerciseSelectorHtml('')}</td>
+                <td><div class="number-control"><button class="btn-sm tpl-set-down">−</button><input type="number" class="tpl-ex-sets" value="3" style="width:60px"><button class="btn-sm tpl-set-up">+</button></div></td>
+                <td><div class="number-control"><button class="btn-sm tpl-rep-down">−</button><input type="number" class="tpl-ex-reps" value="8" style="width:60px"><button class="btn-sm tpl-rep-up">+</button></div></td>
+                <td><div class="number-control"><button class="btn-sm tpl-w-down">−</button><input type="number" class="tpl-ex-weight" value="20" step="2.5" style="width:80px"><button class="btn-sm tpl-w-up">+</button></div></td>
+                <td><input type="number" placeholder="+%" class="tpl-ex-prog-perc" style="width:60px;"><input type="number" placeholder="co" class="tpl-ex-prog-sess" style="width:60px;"></td>
+                <td><button class="btn btn-sm edit-tpl-series-btn" data-idx="${tbody.children.length}">✏️ Serie</button><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`;
+            tbody.appendChild(row);
+            const idx = tbody.children.length - 1;
+            // Podpięcie przycisków
+            const setInp = row.querySelector('.tpl-ex-sets');
+            row.querySelector('.tpl-set-up').addEventListener('click', ()=> setInp.value = +setInp.value + 1);
+            row.querySelector('.tpl-set-down').addEventListener('click', ()=> setInp.value = Math.max(1, +setInp.value - 1));
+            const repInp = row.querySelector('.tpl-ex-reps');
+            row.querySelector('.tpl-rep-up').addEventListener('click', ()=> repInp.value = +repInp.value + 1);
+            row.querySelector('.tpl-rep-down').addEventListener('click', ()=> repInp.value = Math.max(1, +repInp.value - 1));
+            const wInp = row.querySelector('.tpl-ex-weight');
+            row.querySelector('.tpl-w-up').addEventListener('click', ()=> { let v = parseFloat(wInp.value)||0; v += 2.5; wInp.value = Math.round(v*2)/2; });
+            row.querySelector('.tpl-w-down').addEventListener('click', ()=> { let v = parseFloat(wInp.value)||0; v = Math.max(0, v-2.5); wInp.value = Math.round(v*2)/2; });
+            row.querySelector('.edit-tpl-series-btn').addEventListener('click', ()=> editTemplateSeries(idx));
+            row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> row.remove());
+        });
+
+        document.getElementById('save-template-btn').addEventListener('click', ()=>{
+            const id = document.getElementById('edit-template-id').value || 'tpl_'+Date.now();
+            const name = document.getElementById('template-name').value;
+            const perc = +document.getElementById('template-progress-percent').value;
+            const sess = +document.getElementById('template-progress-sessions').value;
+            const formExs = getTemplateExercisesFromForm();
+            if(!name || !formExs.length) return alert('Uzupełnij dane');
+            
+            const tpl = { id, name, progressionPercent: perc, progressionSessions: sess, exercises: formExs };
+            const idx = templates.findIndex(t=>t.id===id);
+            if(idx>=0) templates[idx]=tpl; else templates.push(tpl);
+            saveData(); renderTemplatesPanel(); renderWeeklyPanel();
+            document.getElementById('template-form').style.display='none';
+        });
+        document.getElementById('cancel-template-btn').addEventListener('click', ()=> document.getElementById('template-form').style.display='none');
 
         // ---------- PLAN TYGODNIA ----------
         function renderWeeklyPanel() {
             const container = document.getElementById('weekly-plan-container');
-            const days = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
+            const dayNames = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+
+            // Wyliczamy poniedziałek bieżącego tygodnia
+            const now = new Date();
+            const currentDay = now.getDay();
+            const diffToMonday = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1); 
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(diffToMonday);
+
             container.innerHTML = '';
-            days.forEach((name, i) => {
-                const dayIndex = i===6 ? 0 : i+1;
-                const div = document.createElement('div');
-                div.style.display='flex'; div.style.alignItems='center'; div.style.gap='8px';
-                const typeSelect = document.createElement('select');
-                typeSelect.className = 'weekly-type btn'; typeSelect.dataset.day = dayIndex;
-                ['rest','strength','run','home'].forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v==='rest'?'😴 Odpoczynek':v==='strength'?'🏋️ Siłownia':v==='run'?'🏃 Bieganie':'🧘 Dom'; typeSelect.appendChild(o); });
-                typeSelect.value = weeklyTemplate[dayIndex] || 'rest';
-                const tplSelect = document.createElement('select');
-                tplSelect.className = 'weekly-template btn'; tplSelect.dataset.day = dayIndex;
-                tplSelect.style.display = typeSelect.value==='strength'?'inline':'none';
-                tplSelect.innerHTML = '<option value="">-- Brak --</option>';
-                templates.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; tplSelect.appendChild(o); });
-                if(templateAssignments[dayIndex]) tplSelect.value = templateAssignments[dayIndex];
-                typeSelect.addEventListener('change', ()=> tplSelect.style.display = typeSelect.value==='strength'?'inline':'none');
-                div.appendChild(document.createTextNode(name));
-                div.appendChild(typeSelect);
-                div.appendChild(tplSelect);
+
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(startOfWeek);
+                d.setDate(startOfWeek.getDate() + i);
+                const dayIndex = d.getDay(); // 1=Poniedziałek...0=Niedziela
+
+                const dateStr = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const displayName = `${dayNames[dayIndex]} (${dateStr})`;
+
+                const div = document.createElement('div'); div.style.display='flex'; div.style.gap='8px'; div.style.alignItems='center';
+                const typeSel = document.createElement('select'); typeSel.className='weekly-type'; typeSel.dataset.day=dayIndex;
+                ['rest','strength','run','home'].forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v==='rest'?'😴 Odp.':v==='strength'?'🏋️ Siłownia':v==='run'?'🏃 Bieg':'🧘 Dom'; typeSel.appendChild(o); });
+                typeSel.value = weeklyTemplate[dayIndex]||'rest';
+                const tplSel = document.createElement('select'); tplSel.className='weekly-template'; tplSel.dataset.day=dayIndex;
+                tplSel.style.display = typeSel.value==='strength'?'inline':'none';
+                tplSel.innerHTML = '<option value="">-- Brak --</option>';
+                templates.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; tplSel.appendChild(o); });
+                if(templateAssignments[dayIndex]) tplSel.value = templateAssignments[dayIndex];
+                typeSel.addEventListener('change', ()=> tplSel.style.display = typeSel.value==='strength'?'inline':'none');
+
+                const labelSpan = document.createElement('span');
+                labelSpan.style.width = '145px';
+                labelSpan.style.fontWeight = '500';
+                labelSpan.textContent = displayName;
+
+                div.appendChild(labelSpan); div.appendChild(typeSel); div.appendChild(tplSel);
                 container.appendChild(div);
-            });
+            }
         }
         document.getElementById('save-weekly-template').addEventListener('click', ()=>{
             document.querySelectorAll('.weekly-type').forEach(sel => {
@@ -657,297 +1079,105 @@
             saveData(); alert('✅ Plan zapisany!');
         });
 
-        // ---------- SZABLONY ----------
-        function renderTemplatesPanel() {
-            const list = document.getElementById('templates-list');
-            list.innerHTML = templates.map(t => `
-                <div style="border:1px solid #e2e8f0; border-radius:16px; padding:14px; margin-bottom:12px;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <strong>${t.name}</strong>
-                        <span>📈 +${t.progressionPercent}% / ${t.progressionSessions} treningi | Wykonano: ${templateUsageCount[t.id]||0}</span>
-                        <div>
-                            <button class="btn btn-sm edit-template" data-id="${t.id}">✏️</button>
-                            <button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button>
-                        </div>
-                    </div>
-                    <ul>${t.exercises.map(e=>`<li>${e.name}: ${e.sets}x${e.reps} @ ${e.startWeight}kg</li>`).join('')}</ul>
-                </div>
-            `).join('');
-            document.querySelectorAll('.edit-template').forEach(b => b.addEventListener('click', ()=> editTemplate(b.dataset.id)));
-            document.querySelectorAll('.delete-template').forEach(b => b.addEventListener('click', ()=> {
-                templates = templates.filter(t => t.id !== b.dataset.id);
-                saveData(); renderTemplatesPanel(); renderWeeklyPanel();
-            }));
-        }
-        function editTemplate(id) {
-            const tpl = templates.find(t => t.id === id);
-            if(!tpl) return;
-            document.getElementById('template-form-title').textContent = 'Edytuj szablon';
-            document.getElementById('edit-template-id').value = id;
-            document.getElementById('template-name').value = tpl.name;
-            document.getElementById('template-progress-percent').value = tpl.progressionPercent;
-            document.getElementById('template-progress-sessions').value = tpl.progressionSessions;
-            renderTemplateExercisesTable(tpl.exercises);
-            document.getElementById('template-form').style.display = 'block';
-        }
-        function renderTemplateExercisesTable(exercises) {
-            const tbody = document.querySelector('#template-exercises-table tbody');
-            tbody.innerHTML = '';
-            exercises.forEach((ex, idx) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><input type="text" value="${ex.name}" class="tpl-ex-name"></td>
-                    <td><input type="number" value="${ex.sets}" min="1" class="tpl-ex-sets" style="width:60px"></td>
-                    <td><input type="number" value="${ex.reps}" min="1" class="tpl-ex-reps" style="width:60px"></td>
-                    <td><input type="number" value="${ex.startWeight}" step="2.5" class="tpl-ex-weight" style="width:90px"></td>
-                    <td>
-                        <input type="number" placeholder="+%" class="tpl-ex-prog-perc" value="${ex.progressionPercent || ''}" style="width:60px;">
-                        <input type="number" placeholder="co" class="tpl-ex-prog-sess" value="${ex.progressionSessions || ''}" style="width:60px;">
-                        <button class="btn btn-sm edit-tpl-series-btn" data-idx="${idx}">✏️ Serie</button>
-                    </td>
-                    <td><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>
-                `;
-                tbody.appendChild(row);
-            });
-            document.querySelectorAll('.edit-tpl-series-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => editTemplateSeries(parseInt(btn.dataset.idx)));
-            });
-            document.querySelectorAll('.remove-tpl-ex').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('tr').remove()));
-        }
-        function editTemplateSeries(idx) {
-            const row = document.querySelectorAll('#template-exercises-table tbody tr')[idx];
-            const name = row.querySelector('.tpl-ex-name').value;
-            const sets = parseInt(row.querySelector('.tpl-ex-sets').value) || 3;
-            const reps = parseInt(row.querySelector('.tpl-ex-reps').value) || 8;
-            const weight = parseFloat(row.querySelector('.tpl-ex-weight').value) || 20;
-            let html = `<h4>${name} – definiuj serie</h4>`;
-            for (let i=0; i<sets; i++) {
-                html += `<div style="margin-bottom:8px;">Seria ${i+1}: 
-                    <input id="tpl-s-${i}-reps" value="${reps}" style="width:60px;" type="number" min="1"> powt × 
-                    <input id="tpl-s-${i}-weight" value="${weight}" style="width:90px;" type="number" step="2.5" min="0"> kg
-                </div>`;
-            }
-            html += `<button id="save-tpl-series" class="btn btn-primary">Zapisz</button>`;
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed; top:20%; left:5%; right:5%; background:#fff; padding:20px; border-radius:24px; z-index:1000;';
-            modal.innerHTML = html;
-            document.body.appendChild(modal);
-            document.getElementById('save-tpl-series').onclick = () => {
-                const newReps = parseInt(document.getElementById('tpl-s-0-reps').value) || reps;
-                const newWeight = parseFloat(document.getElementById('tpl-s-0-weight').value) || weight;
-                row.querySelector('.tpl-ex-reps').value = newReps;
-                row.querySelector('.tpl-ex-weight').value = newWeight;
-                modal.remove();
-            };
-        }
-        function getTemplateExercisesFromForm() {
-            const rows = document.querySelectorAll('#template-exercises-table tbody tr');
-            return Array.from(rows).map(row => ({
-                name: row.querySelector('.tpl-ex-name').value,
-                sets: parseInt(row.querySelector('.tpl-ex-sets').value),
-                reps: parseInt(row.querySelector('.tpl-ex-reps').value),
-                startWeight: parseFloat(row.querySelector('.tpl-ex-weight').value),
-                progressionPercent: row.querySelector('.tpl-ex-prog-perc').value ? parseFloat(row.querySelector('.tpl-ex-prog-perc').value) : null,
-                progressionSessions: row.querySelector('.tpl-ex-prog-sess').value ? parseInt(row.querySelector('.tpl-ex-prog-sess').value) : null
-            })).filter(e => e.name);
-        }
-
         // ---------- REKORDY ----------
         function renderRecordsPanel() {
-            const container = document.getElementById('records-container');
-            const exercisesSet = new Set();
-            templates.forEach(t => t.exercises.forEach(e => exercisesSet.add(e.name)));
-            const exercises = Array.from(exercisesSet).sort();
-            let html = '';
-            exercises.forEach(exName => {
-                const record = personalRecords[exName] || '';
-                html += `
-                    <div style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #e2e8f0;">
-                        <span style="flex:1; font-weight:500;">${exName}</span>
-                        <input type="number" class="record-input" data-exercise="${exName}" value="${record}" placeholder="kg" step="2.5" min="0" style="width:100px;">
-                        <span>kg</span>
-                    </div>
-                `;
-            });
-            container.innerHTML = html || '<p>Brak ćwiczeń w szablonach.</p>';
+            const cont = document.getElementById('records-container');
+            const exs = new Set(); templates.forEach(t=>t.exercises.forEach(e=>exs.add(e.name)));
+            const arr = Array.from(exs).sort();
+            cont.innerHTML = arr.map(ex=>`<div style="display:flex; gap:10px; padding:8px;"><span style="flex:1">${ex}</span><input class="record-input" data-exercise="${ex}" value="${personalRecords[ex]||''}" placeholder="kg" step="2.5" style="width:100px;"> kg</div>`).join('') || '<p>Brak ćwiczeń</p>';
         }
-        function saveRecords() {
-            document.querySelectorAll('.record-input').forEach(input => {
-                const ex = input.dataset.exercise;
-                const val = parseFloat(input.value);
-                if (!isNaN(val) && val > 0) personalRecords[ex] = val;
-                else delete personalRecords[ex];
+        document.getElementById('save-records-btn').addEventListener('click', ()=>{
+            document.querySelectorAll('.record-input').forEach(inp => {
+                const ex = inp.dataset.exercise; const v = parseFloat(inp.value);
+                if(!isNaN(v) && v>0) personalRecords[ex] = v; else delete personalRecords[ex];
             });
-            saveData();
-            alert('✅ Rekordy zapisane!');
-        }
+            saveData(); alert('✅ Rekordy zapisane');
+        });
 
         // ---------- PROGRES ----------
         function populateProgressSelect() {
             const sel = document.getElementById('progress-exercise-select');
-            const allEx = new Set(Object.keys(exerciseHistory));
-            templates.forEach(t => t.exercises.forEach(e => allEx.add(e.name)));
-            const arr = Array.from(allEx).sort();
-            sel.innerHTML = arr.length ? arr.map(e=>`<option>${e}</option>`).join('') : '<option>Brak danych</option>';
+            const all = new Set(Object.keys(exerciseHistory));
+            templates.forEach(t=>t.exercises.forEach(e=>all.add(e.name)));
+            const arr = Array.from(all).sort();
+            sel.innerHTML = arr.map(e=>`<option>${e}</option>`).join('') || '<option>Brak danych</option>';
             if(arr.length) renderProgressChart(arr[0]);
         }
         function renderProgressChart(exName) {
             const hist = exerciseHistory[exName]||[];
             if(progressChart) progressChart.destroy();
-            const ctx = document.getElementById('progress-chart').getContext('2d');
-            progressChart = new Chart(ctx, {
-                type: 'line', data: { labels: hist.map(h=>h.date), datasets: [
-                    { label: 'E1RM (kg)', data: hist.map(h=>h.e1rm), borderColor: '#f97316', yAxisID: 'y' },
-                    { label: 'Objętość', data: hist.map(h=>h.volume), borderColor: '#3b82f6', yAxisID: 'y1' }
-                ]},
-                options: { responsive: true, maintainAspectRatio: false, scales: { y:{}, y1:{ position:'right', grid:{ drawOnChartArea:false } } } }
-            });
+            progressChart = new Chart(document.getElementById('progress-chart'), { type:'line', data:{ labels: hist.map(h=>h.date), datasets:[
+                { label:'E1RM', data: hist.map(h=>h.e1rm), borderColor:'#f97316', yAxisID:'y' },
+                { label:'Objętość', data: hist.map(h=>h.volume), borderColor:'#3b82f6', yAxisID:'y1' }
+            ]}, options:{ responsive:true, scales:{ y:{}, y1:{ position:'right' } } } });
         }
         function renderWeeklyVolumeChart() {
             const vols = {};
             Object.entries(workouts).forEach(([d,w])=>{
-                if(w.status !== 'completed') return;
-                const week = getWeekNumber(new Date(d));
-                const key = `${new Date(d).getFullYear()}-W${week}`;
+                if(w.status!=='completed') return;
+                const week = getWeekNumber(new Date(d)); const key = `${new Date(d).getFullYear()}-W${week}`;
                 let load = 0;
-                if(w.type === 'strength') {
-                    w.exercises?.forEach(ex=>{ if(ex.actualSets) ex.actualSets.forEach(s => load += s.w*s.reps); });
-                } else if(w.type === 'run' || w.type === 'home') {
-                    load = w.loadScore || 0;
-                }
-                vols[key] = (vols[key]||0) + load;
+                if(w.type==='strength') w.exercises?.forEach(e=>e.actualSets?.forEach(s=>load+=s.w*s.reps));
+                else if(w.type==='run'||w.type==='home') load = w.loadScore||0;
+                vols[key] = (vols[key]||0)+load;
             });
             const keys = Object.keys(vols).sort();
             if(weeklyChart) weeklyChart.destroy();
-            weeklyChart = new Chart(document.getElementById('weekly-volume-chart'), { type:'bar', data:{ labels:keys, datasets:[{ label:'Obciążenie tygodnia', data: keys.map(k=>vols[k]) }] }});
+            weeklyChart = new Chart(document.getElementById('weekly-volume-chart'), { type:'bar', data:{ labels:keys, datasets:[{ label:'Tonaż', data: keys.map(k=>vols[k]) }] } });
         }
         function renderWeightChart() {
             const entries = Object.entries(weightHistory).sort((a,b)=>a[0].localeCompare(b[0]));
-            const labels = entries.map(e=>e[0]);
-            const data = entries.map(e=>e[1]);
             if(weightChart) weightChart.destroy();
-            const ctx = document.getElementById('weight-chart').getContext('2d');
-            weightChart = new Chart(ctx, {
-                type: 'line', data: { labels, datasets: [{ label: 'Waga (kg)', data, borderColor: '#8b5cf6', tension: 0.2 }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+            weightChart = new Chart(document.getElementById('weight-chart'), { type:'line', data:{ labels:entries.map(e=>e[0]), datasets:[{ label:'Waga (kg)', data:entries.map(e=>e[1]), borderColor:'#8b5cf6' }] } });
         }
+        document.getElementById('save-weight-today').addEventListener('click', ()=>{
+            const ds = formatDate(new Date());
+            weightHistory[ds] = userWeight;
+            saveData(); alert('✅ Waga zapisana'); renderWeightChart();
+        });
+        document.getElementById('progress-exercise-select').addEventListener('change', e=>renderProgressChart(e.target.value));
 
-        // ---------- INIT ----------
+        // ---------- INICJALIZACJA ----------
         document.addEventListener('DOMContentLoaded', ()=>{
-            loadData();
-            renderCalendar(); renderTemplatesPanel(); renderWeeklyPanel();
-            
-            document.querySelectorAll('.tab').forEach(t=> t.addEventListener('click', ()=>{
+            loadData(); renderCalendar(); renderTemplatesPanel(); renderWeeklyPanel();
+            document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
                 document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
                 document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
                 t.classList.add('active');
                 document.getElementById(t.dataset.tab+'-panel').classList.add('active');
-                if(t.dataset.tab==='progress') { populateProgressSelect(); renderWeeklyVolumeChart(); renderWeightChart(); }
+                if(t.dataset.tab==='progress'){ populateProgressSelect(); renderWeeklyVolumeChart(); renderWeightChart(); }
                 if(t.dataset.tab==='future') renderFuturePlan();
                 if(t.dataset.tab==='workout') renderWorkoutPanel();
+                if(t.dataset.tab==='weekly') renderWeeklyPanel();
                 if(t.dataset.tab==='records') renderRecordsPanel();
             }));
-            
-            document.getElementById('prev-month').addEventListener('click', ()=>{ currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
-            document.getElementById('next-month').addEventListener('click', ()=>{ currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
+            document.getElementById('prev-month').addEventListener('click', ()=> { currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); });
+            document.getElementById('next-month').addEventListener('click', ()=> { currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); });
             document.getElementById('sync-calendar-from-weekly').addEventListener('click', ()=>{
-                const year = currentDate.getFullYear(), month = currentDate.getMonth();
+                const y=currentDate.getFullYear(), m=currentDate.getMonth();
                 const today = new Date(); today.setHours(0,0,0,0);
-                for(let d=1; d<=new Date(year, month+1, 0).getDate(); d++) {
-                    const date = new Date(year, month, d);
-                    if (date < today) continue;
-                    const dateStr = formatDate(date);
-                    const existing = workouts[dateStr];
-                    if (!existing || existing.status === 'planned') {
-                        workouts[dateStr] = generateWorkoutFromWeeklyPlan(date);
-                    }
+                for(let d=1; d<=new Date(y,m+1,0).getDate(); d++) {
+                    const dt = new Date(y,m,d); if(dt<today) continue;
+                    const ds = formatDate(dt); if(!workouts[ds]||workouts[ds].status==='planned') workouts[ds]=generateWorkoutFromWeeklyPlan(dt);
                 }
-                saveData(); renderCalendar(); alert('✅ Miesiąc zaktualizowany.');
+                saveData(); renderCalendar(); alert('✅ Zaktualizowano');
             });
             document.getElementById('refresh-from-weekly-btn').addEventListener('click', ()=>{
-                const w = workouts[formatDate(selectedDate)];
-                if(w && w.status !== 'planned' && !confirm('Nadpisać?')) return;
+                if(workouts[formatDate(selectedDate)]?.status!=='planned' && !confirm('Nadpisać?')) return;
                 workouts[formatDate(selectedDate)] = generateWorkoutFromWeeklyPlan(selectedDate);
                 saveData(); renderWorkoutPanel(); renderCalendar();
             });
             document.getElementById('generate-future-plan').addEventListener('click', generateFutureFourWeeks);
             document.getElementById('disposition-slider').addEventListener('input', e=>{ currentDisposition=e.target.value/100; document.getElementById('disposition-value').textContent=e.target.value+'%'; renderWorkoutPanel(); });
-            document.getElementById('add-exercise-btn').addEventListener('click', ()=> document.getElementById('add-exercise-form').style.display='block');
-            document.querySelectorAll('.preset').forEach(p=> p.addEventListener('click', ()=> addExercise(p.dataset.preset)));
-            document.getElementById('add-custom-exercise').addEventListener('click', ()=>{
-                const n = document.getElementById('custom-exercise-name').value.trim();
-                if(n) addExercise(n);
-            });
-            function addExercise(name) {
-                const d = formatDate(selectedDate);
-                if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, status:'planned' };
-                workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedReps:8, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20,rpe:8}), templateExercise: false });
-                renderWorkoutPanel(); saveData();
-                document.getElementById('add-exercise-form').style.display='none';
-                document.getElementById('custom-exercise-name').value='';
-            }
-            
-            document.getElementById('user-height').addEventListener('input', ()=>{ userHeight = parseFloat(document.getElementById('user-height').value)||175; updateBMI(); saveData(); });
-            document.getElementById('user-weight').addEventListener('input', ()=>{ userWeight = parseFloat(document.getElementById('user-weight').value)||70; updateBMI(); saveData(); });
-            document.getElementById('resting-hr').addEventListener('input', ()=>{ restingHR = parseFloat(document.getElementById('resting-hr').value)||60; saveData(); });
-            document.getElementById('save-weight-today').addEventListener('click', saveWeightForToday);
-            
-            document.getElementById('create-template-btn').addEventListener('click', ()=>{
-                document.getElementById('edit-template-id').value = '';
-                document.getElementById('template-name').value = '';
-                renderTemplateExercisesTable([]);
-                document.getElementById('template-form').style.display = 'block';
-            });
-            document.getElementById('add-exercise-to-template').addEventListener('click', ()=>{
-                const tbody = document.querySelector('#template-exercises-table tbody');
-                const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" class="tpl-ex-name" value="Nowe"></td><td><input type="number" class="tpl-ex-sets" value="3"></td><td><input type="number" class="tpl-ex-reps" value="8"></td><td><input type="number" class="tpl-ex-weight" value="20" step="2.5"></td>
-                <td><input type="number" placeholder="+%" class="tpl-ex-prog-perc"><input type="number" placeholder="co" class="tpl-ex-prog-sess"><button class="btn btn-sm edit-tpl-series-btn">✏️ Serie</button></td>
-                <td><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`;
-                tbody.appendChild(row);
-                const idx = tbody.children.length - 1;
-                row.querySelector('.edit-tpl-series-btn').addEventListener('click', ()=> editTemplateSeries(idx));
-                row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> row.remove());
-            });
-            document.getElementById('save-template-btn').addEventListener('click', ()=>{
-                const id = document.getElementById('edit-template-id').value || 'tpl_'+Date.now();
-                const name = document.getElementById('template-name').value;
-                const perc = +document.getElementById('template-progress-percent').value;
-                const sess = +document.getElementById('template-progress-sessions').value;
-                const exs = getTemplateExercisesFromForm();
-                if(!name || !exs.length) return alert('Uzupełnij dane');
-                const tpl = { id, name, progressionPercent: perc, progressionSessions: sess, exercises: exs };
-                const idx = templates.findIndex(t=>t.id===id);
-                if(idx>=0) templates[idx]=tpl; else templates.push(tpl);
-                saveData(); renderTemplatesPanel(); renderWeeklyPanel();
-                document.getElementById('template-form').style.display='none';
-            });
-            document.getElementById('cancel-template-btn').addEventListener('click', ()=> document.getElementById('template-form').style.display='none');
-            
-            document.getElementById('save-records-btn').addEventListener('click', saveRecords);
-            
-            document.getElementById('progress-exercise-select').addEventListener('change', e=> renderProgressChart(e.target.value));
+            document.getElementById('user-height').addEventListener('input', ()=>{ userHeight = +document.getElementById('user-height').value; updateBMI(); saveData(); });
+            document.getElementById('user-weight').addEventListener('input', ()=>{ userWeight = +document.getElementById('user-weight').value; updateBMI(); saveData(); });
+            document.getElementById('resting-hr').addEventListener('input', ()=>{ restingHR = +document.getElementById('resting-hr').value; saveData(); });
             document.getElementById('export-txt-btn').addEventListener('click', ()=>{
-                const dateStr = formatDate(selectedDate);
-                const w = workouts[dateStr];
-                if(!w) return alert('Brak treningu.');
-                let content = `Trening: ${new Intl.DateTimeFormat('pl').format(selectedDate)}\nTyp: ${w.type}\n`;
-                if(w.type === 'strength') {
-                    w.exercises.forEach(ex => {
-                        content += `${ex.name} (${ex.sets} serie, cel: ${ex.plannedReps} @ ${ex.plannedWeight} kg)\n`;
-                        if(ex.actualSets) ex.actualSets.forEach((s, i) => { 
-                            content += `  Seria ${i+1}: ${s.reps} x ${s.w} kg` + (s.rpe ? `, RPE ${s.rpe}` : '') + '\n'; 
-                        });
-                    });
-                } else {
-                    content += `Czas: ${Math.round(w.duration/60)} min, Tętno: ${w.avgHr}\n`;
-                }
-                const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `trening_${dateStr}.txt`;
-                link.click();
+                const w = workouts[formatDate(selectedDate)]; if(!w) return alert('Brak treningu');
+                let txt = `Trening ${selectedDate.toLocaleDateString('pl')}\nTyp: ${w.type}\n`;
+                if(w.type==='strength') w.exercises.forEach(e=>{ txt+=`${e.name}: ${e.sets}x${e.plannedReps} @${e.plannedWeight}kg\n`; e.actualSets?.forEach((s,i)=>txt+=`  Seria ${i+1}: ${s.reps}x${s.w}kg RPE ${s.rpe||'-'}\n`); });
+                else txt += `Czas: ${Math.round(w.duration/60)} min, tętno: ${w.avgHr}\n`;
+                const blob = new Blob([txt], {type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`trening_${formatDate(selectedDate)}.txt`; a.click();
             });
         });
     })();
