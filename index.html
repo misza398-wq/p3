@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>💪 Cykl PRO – wskaźniki zmian</title>
+    <title>💪 Cykl PRO – heatmapa miesięczna w blokach</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -189,8 +189,11 @@
         .life-chart-container { height: 200px; margin: 20px 0; }
         .heatmap-container { margin: 20px 0; }
         .heatmap-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .heatmap-grid { display: grid; gap: 3px; }
-        .heatmap-cell { aspect-ratio: 1/1; border-radius: 3px; }
+        .heatmap-year-blocks { display: flex; flex-direction: column; gap: 8px; }
+        .heatmap-month-block { background: var(--surface-2); border-radius: var(--r-xs); padding: 8px; }
+        .heatmap-month-title { font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; color: var(--text-2); }
+        .heatmap-days-flex { display: flex; flex-wrap: wrap; gap: 3px; }
+        .heatmap-cell { width: 20px; height: 20px; border-radius: 3px; }
         .alert-message { background: rgba(239,68,68,0.1); border-left: 4px solid var(--danger); padding: 12px 16px; border-radius: var(--r-xs); margin: 16px 0; color: var(--text); font-weight: 500; }
         .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 12px; }
         .color-item { display: flex; flex-direction: column; gap: 4px; }
@@ -198,6 +201,7 @@
         .exercises-manager-list { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px; }
         .exercise-manager-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border); }
         .exercise-manager-item:last-child { border-bottom: none; }
+        .collapse-icon { cursor: pointer; margin-right: 5px; font-size: 1.2rem; user-select: none; }
         @media (max-width: 620px) {
             .panel { padding: 16px 12px; }
             .app { padding: 10px 8px; }
@@ -207,6 +211,7 @@
             .editable { width: 48px; }
             .brand-title { font-size: 1.2rem; }
             .tabs { grid-template-columns: repeat(2, 1fr); }
+            .heatmap-cell { width: 16px; height: 16px; }
         }
     </style>
 </head>
@@ -296,7 +301,12 @@
         </div>
         <div id="strength-view">
             <div class="panel-light">✅ Status: <strong id="completion-status">Zaplanowano</strong></div>
-            <div class="table-responsive"><table class="workout-table"><thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Objętość</th><th>RPE</th><th></th></tr></thead><tbody id="exercises-tbody"></tbody></table></div>
+            <div class="table-responsive">
+                <table class="workout-table">
+                    <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Objętość</th><th>RPE</th><th></th></tr></thead>
+                    <tbody id="exercises-tbody"></tbody>
+                </table>
+            </div>
             <div class="total-vol">
                 💪 Łączne obciążenie: <span id="total-volume">0</span> kg
                 <span id="volume-diff" class="volume-diff"></span>
@@ -360,7 +370,7 @@
     <div id="progress-panel" class="panel">
         <div class="panel-icon-title"><div class="panel-icon">📈</div><div class="panel-text">Progres</div></div>
         <select id="progress-exercise-select" style="margin-bottom:20px;"></select>
-        <div class="chart-section"><h3>📊 E1RM i Objętość</h3><div class="chart-container"><canvas id="progress-chart"></canvas></div></div>
+        <div class="chart-section"><h3>📊 E1RM (Epley) i Objętość</h3><div class="chart-container"><canvas id="progress-chart"></canvas></div></div>
         <div class="chart-section"><h3>📅 Tonaż tygodniowy</h3><div class="chart-container"><canvas id="weekly-volume-chart"></canvas></div></div>
         <div class="chart-section"><h3>📈 Objętość szablonów (tygodniowo)</h3><div class="chart-container"><canvas id="template-volume-chart"></canvas></div></div>
         <div class="chart-section"><h3>⚖️ Historia wagi ciała</h3><div class="chart-container"><canvas id="weight-chart"></canvas></div></div>
@@ -422,7 +432,7 @@
             <div class="heatmap-header">
                 <h4 style="margin:0;">📅 Heatmapa</h4>
                 <select id="heatmap-type-select" style="padding:6px 12px; border-radius:var(--r-pill); background:var(--surface); border:1px solid var(--border); color:var(--text);">
-                    <option value="year">Roczna (miesiące)</option>
+                    <option value="year">Roczna (bloki miesięcy)</option>
                     <option value="month">Miesięczna</option>
                 </select>
                 <select id="heatmap-month-select" style="padding:6px 12px; border-radius:var(--r-pill); background:var(--surface); border:1px solid var(--border); color:var(--text); display:none;">
@@ -432,10 +442,7 @@
                     <option value="9">Październik</option><option value="10">Listopad</option><option value="11">Grudzień</option>
                 </select>
             </div>
-            <div style="display:flex;">
-                <div id="heatmap-month-numbers" style="display:flex; flex-direction:column; margin-right:5px; font-size:0.7rem; color:var(--text-3);"></div>
-                <div id="heatmap-grid" class="heatmap-grid" style="flex:1;"></div>
-            </div>
+            <div id="heatmap-container-content"></div>
         </div>
         <div class="add-category-form">
             <input type="text" id="new-category-name" placeholder="Nowa kategoria" style="width:220px;">
@@ -490,7 +497,7 @@
         let currentWeekOffset = 0;
         let lifeLineChart = null;
 
-        // Zmienna do przechowywania oryginalnego obciążenia treningu (przed edycją)
+        // Zmienna do przechowywania oryginalnego obciążenia treningu
         let originalWorkoutVolume = 0;
 
         // ---------- POMOCNICZE ----------
@@ -531,7 +538,6 @@
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
             let firstWeight = null;
-            // Znajdź pierwszy pomiar w tym miesiącu
             Object.entries(weightHistory).forEach(([dateStr, w]) => {
                 const d = new Date(dateStr + 'T12:00:00');
                 if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
@@ -601,7 +607,6 @@
             document.getElementById('complete-workout-btn').textContent = w.status === 'completed' ? '✅ Wykonano' : '🏁 Trening skończony';
             toggleWorkoutView(w.type);
             if(w.type==='strength') {
-                // Zapamiętaj oryginalną objętość przed renderowaniem (sprzed ewentualnych zmian)
                 originalWorkoutVolume = calculateVolumeFromExercises(w.exercises);
                 renderStrengthExercises(w.exercises);
                 const currentVol = calculateVolumeFromExercises(w.exercises);
@@ -625,6 +630,9 @@
             const deloadSets = parseFloat(document.getElementById('deload-sets-slider')?.value || 0) / 100;
             const deloadReps = parseFloat(document.getElementById('deload-reps-slider')?.value || 0) / 100;
             exs.forEach((ex,idx)=>{
+                if (ex.collapsed === undefined) ex.collapsed = false;
+                const isCollapsed = ex.collapsed;
+                
                 let sets = ex.sets||3;
                 if (deloadActive) sets = Math.max(1, Math.round(sets * (1 - deloadSets)));
                 let vol=0, avgRpe=null;
@@ -641,9 +649,42 @@
                 }
                 const rec = personalRecords[ex.name] ? ` <span style="font-size:0.78rem; color:var(--text-3);">(🏆${personalRecords[ex.name]}kg)</span>`:'';
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><strong>${ex.name}</strong>${rec}</td><td><div class="number-control"><button class="btn-sm set-down" data-idx="${idx}">−</button><input class="editable sets-count" data-idx="${idx}" value="${sets}" min="1" style="width:50px"><button class="btn-sm set-up" data-idx="${idx}">+</button></div></td><td>${vol} kg</td><td>${avgRpe?`<span class="rpe-badge">RPE ${avgRpe}</span>`:'-'}</td><td class="action-buttons"><button class="btn btn-sm move-up" data-idx="${idx}">↑</button><button class="btn btn-sm move-down" data-idx="${idx}">↓</button><button class="btn btn-sm edit-sets-btn" data-idx="${idx}">✏️</button><button class="btn btn-sm remove-exercise" data-idx="${idx}">🗑️</button></td>`;
+                row.dataset.idx = idx;
+                
+                if (isCollapsed) {
+                    row.innerHTML = `
+                        <td colspan="5">
+                            <span class="collapse-icon" data-idx="${idx}">▶</span>
+                            <strong>${ex.name}</strong>${rec}
+                            <span style="margin-left:10px; font-size:0.8rem; color:var(--text-2);">${sets} serii, ${vol} kg</span>
+                        </td>
+                    `;
+                } else {
+                    row.innerHTML = `
+                        <td><span class="collapse-icon" data-idx="${idx}">▼</span> <strong>${ex.name}</strong>${rec}</td>
+                        <td><div class="number-control"><button class="btn-sm set-down" data-idx="${idx}">−</button><input class="editable sets-count" data-idx="${idx}" value="${sets}" min="1" style="width:50px"><button class="btn-sm set-up" data-idx="${idx}">+</button></div></td>
+                        <td>${vol} kg</td>
+                        <td>${avgRpe?`<span class="rpe-badge">RPE ${avgRpe}</span>`:'-'}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-sm move-up" data-idx="${idx}">↑</button>
+                            <button class="btn btn-sm move-down" data-idx="${idx}">↓</button>
+                            <button class="btn btn-sm edit-sets-btn" data-idx="${idx}">✏️</button>
+                            <button class="btn btn-sm remove-exercise" data-idx="${idx}">🗑️</button>
+                        </td>
+                    `;
+                }
                 tbody.appendChild(row);
             });
+            
+            document.querySelectorAll('.collapse-icon').forEach(icon => {
+                icon.addEventListener('click', (e) => {
+                    const idx = icon.dataset.idx;
+                    w.exercises[idx].collapsed = !w.exercises[idx].collapsed;
+                    renderWorkoutPanel();
+                    saveData();
+                });
+            });
+            
             document.querySelectorAll('.set-up, .set-down').forEach(b=>b.addEventListener('click',(e)=>{
                 const idx = b.dataset.idx; const inp = document.querySelector(`.sets-count[data-idx="${idx}"]`);
                 inp.value = b.classList.contains('set-up') ? +inp.value+1 : Math.max(1,+inp.value-1);
@@ -674,7 +715,6 @@
                 if (!confirm('Usunąć ćwiczenie?')) return;
                 const exName = w.exercises[b.dataset.idx].name;
                 w.exercises.splice(b.dataset.idx,1);
-                // Usuń wpisy historii dla tego ćwiczenia z tego dnia
                 if (exerciseHistory[exName]) {
                     exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== formatDate(selectedDate));
                     if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName];
@@ -701,11 +741,16 @@
                     <div style="display:flex; align-items:center; gap:5px;"><span style="color:var(--text-2); font-size:0.85rem;">RPE:</span><div class="number-control"><button class="btn-sm ser-rpe-down" data-ser="${i}">−</button><input id="s-${i}-rpe" value="${s.rpe||8}" style="width:60px" step="0.5" min="1" max="10"><button class="btn-sm ser-rpe-up" data-ser="${i}">+</button></div></div>
                 </div>`;
             });
-            html += `<div style="margin-top:16px; text-align:right;"><button class="btn btn-primary" id="save-sets">💾 Zapisz serie</button></div>`;
+            html += `<div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+                <button class="btn" id="cancel-sets">🚪 Zostaw</button>
+                <button class="btn btn-primary" id="save-sets">💾 Zapisz</button>
+                <button class="btn btn-success" id="done-sets" style="background:var(--success); color:#fff; border-color:var(--success);">✅ Wykonane</button>
+            </div>`;
             const overlay = document.createElement('div'); overlay.className = 'modal-overlay';
             const modal = document.createElement('div'); modal.className = 'modal-box'; modal.innerHTML = html;
             overlay.appendChild(modal); document.body.appendChild(overlay);
             overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+            
             modal.querySelectorAll('.ser-rep-up, .ser-rep-down').forEach(b => b.addEventListener('click', (e) => {
                 const inp = modal.querySelector(`#s-${b.dataset.ser}-r`);
                 inp.value = b.classList.contains('ser-rep-up') ? +inp.value + 1 : Math.max(1, +inp.value - 1);
@@ -722,7 +767,9 @@
                 v = b.classList.contains('ser-rpe-up') ? Math.min(10, v + 0.5) : Math.max(1, v - 0.5);
                 inp.value = Math.round(v * 2) / 2;
             }));
-            document.getElementById('save-sets').onclick = () => {
+            
+            const closeModal = () => overlay.remove();
+            const saveChanges = (collapseAfter = false) => {
                 const newSets = [];
                 for (let i = 0; i < originalSets.length; i++) {
                     let reps = +modal.querySelector(`#s-${i}-r`).value;
@@ -733,20 +780,48 @@
                 }
                 ex.actualSets = newSets;
                 ex.plannedWeight = roundWeight(newSets.reduce((sum, s) => sum + s.w, 0) / newSets.length);
+                if (collapseAfter) ex.collapsed = true;
                 overlay.remove();
                 const currentVol = calculateVolumeFromExercises(w.exercises);
                 document.getElementById('total-volume').textContent = currentVol;
                 updateVolumeDiffDisplay(currentVol);
+                renderWorkoutPanel();
                 saveData();
             };
+            
+            document.getElementById('cancel-sets').onclick = closeModal;
+            document.getElementById('save-sets').onclick = () => saveChanges(false);
+            document.getElementById('done-sets').onclick = () => saveChanges(true);
         }
-        function addExercise(name) { const d = formatDate(selectedDate); if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, status:'planned', notes:'' }; workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20,rpe:8}), templateExercise: false }); renderWorkoutPanel(); saveData(); }
+        function addExercise(name) { const d = formatDate(selectedDate); if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, status:'planned', notes:'' }; workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedWeight:20, actualSets: Array(3).fill({reps:8,w:20,rpe:8}), templateExercise: false, collapsed: false }); renderWorkoutPanel(); saveData(); }
 
         // ---------- AKTUALIZACJA SZABLONU ----------
         function updateTemplateFromWorkout(templateId, workoutExercises) { const tpl = templates.find(t => t.id === templateId); if (!tpl) return; let changed = false; workoutExercises.forEach(wEx => { const tplEx = tpl.exercises.find(e => e.name === wEx.name); if (!tplEx) return; if (wEx.actualSets && wEx.actualSets.length) { const avgWeight = wEx.actualSets.reduce((sum, s) => sum + s.w, 0) / wEx.actualSets.length; const newWeight = Math.round(avgWeight / 2.5) * 2.5; if (newWeight > 0 && newWeight !== tplEx.startWeight) { tplEx.startWeight = newWeight; changed = true; } tplEx.actualSets = JSON.parse(JSON.stringify(wEx.actualSets)); } if (wEx.sets !== tplEx.sets) { tplEx.sets = wEx.sets; changed = true; } }); if (changed) { saveData(); if (document.getElementById('templates-panel').classList.contains('active')) renderTemplatesPanel(); } }
         function resetWorkoutToPlanned(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w || w.status === 'planned') return; const wasCompleted = w.status === 'completed'; w.status = 'planned'; if (wasCompleted) { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); if (w.templateId && w.type === 'strength' && !w.deload) templateUsageCount[w.templateId] = Math.max(0, (templateUsageCount[w.templateId] || 1) - 1); } saveData(); renderCalendar(); renderWorkoutPanel(); }
         function deleteWorkout(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w) return; if (w.status === 'completed') { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); if (w.templateId && w.type === 'strength' && !w.deload) templateUsageCount[w.templateId] = Math.max(0, (templateUsageCount[w.templateId] || 1) - 1); } delete workouts[ds]; saveData(); renderCalendar(); if (formatDate(selectedDate) === ds) { selectedDate.setDate(selectedDate.getDate()+1); renderWorkoutPanel(); } }
-        function updateHistory(date) { const w = workouts[formatDate(date)]; if(!w||w.type!=='strength') return; w.exercises.forEach(e=>{ if(!exerciseHistory[e.name]) exerciseHistory[e.name]=[]; let max=0, e1rm=0, vol=0, sum=0, cnt=0; e.actualSets?.forEach(s=>{ if(s.w>max) max=s.w; const rm=s.w*(1+s.reps/30); if(rm>e1rm) e1rm=rm; vol+=s.w*s.reps; if(s.rpe){sum+=s.rpe; cnt++;} }); exerciseHistory[e.name].push({date:formatDate(date), maxWeight:max, e1rm:Math.round(e1rm*10)/10, volume:vol, avgRpe:cnt?Math.round(sum/cnt*10)/10:null}); }); }
+        function updateHistory(date) {
+            const w = workouts[formatDate(date)];
+            if(!w||w.type!=='strength') return;
+            w.exercises.forEach(e=>{
+                if(!exerciseHistory[e.name]) exerciseHistory[e.name]=[];
+                let max=0, e1rm=0, vol=0, sum=0, cnt=0;
+                e.actualSets?.forEach(s=>{
+                    if(s.w>max) max=s.w;
+                    // FORMUŁA EPLEYA: E1RM = w * (1 + reps/30)
+                    const rm = s.w * (1 + s.reps / 30);
+                    if(rm>e1rm) e1rm=rm;
+                    vol+=s.w*s.reps;
+                    if(s.rpe){sum+=s.rpe; cnt++;}
+                });
+                exerciseHistory[e.name].push({
+                    date:formatDate(date),
+                    maxWeight:max,
+                    e1rm:Math.round(e1rm*10)/10,
+                    volume:vol,
+                    avgRpe:cnt?Math.round(sum/cnt*10)/10:null
+                });
+            });
+        }
 
         // ---------- HARMONOGRAM ----------
         function renderHarmonogramDays() { const monthStr = document.getElementById('plan-month').value; if (!monthStr) return; const [year, month] = monthStr.split('-').map(Number); const firstDay = new Date(year, month-1, 1); const startDate = new Date(firstDay); startDate.setDate(1 - (firstDay.getDay() === 0 ? 6 : firstDay.getDay()-1)); const container = document.getElementById('month-days-container'); container.innerHTML = ''; const dayNames = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd']; dayNames.forEach(d => { const header = document.createElement('div'); header.style.textAlign = 'center'; header.style.fontWeight = '700'; header.style.fontSize = '0.75rem'; header.style.textTransform = 'uppercase'; header.style.letterSpacing = '0.5px'; header.style.color = 'var(--text-3)'; header.style.padding = '6px 0'; header.textContent = d; container.appendChild(header); }); for (let i = 0; i < 42; i++) { const cellDate = new Date(startDate); cellDate.setDate(startDate.getDate() + i); const dateStr = formatDate(cellDate); const w = workouts[dateStr]; const isCurrentMonth = cellDate.getMonth() === month-1; const cell = document.createElement('div'); cell.className = 'month-day-cell'; cell.style.opacity = isCurrentMonth ? '1' : '0.4'; if (w) { cell.classList.add(`type-${w.type}`); const statusColors = {planned:'#60A5FA',completed:'#10B981',skipped:'#EF4444'}; cell.style.backgroundColor = statusColors[w.status] + '20'; cell.style.borderColor = statusColors[w.status] + '60'; } const icon = w ? (w.type==='strength'?'🏋️':w.type==='run'?'🏃':w.type==='home'?'🧘':'😴') : '😴'; cell.innerHTML = `<strong>${cellDate.getDate()}</strong><br><small style="color:var(--text-2);">${icon}</small>`; cell.addEventListener('click', ()=> openDayEditor(cellDate)); container.appendChild(cell); } }
@@ -791,40 +866,35 @@
         function renderHeatmap() {
             const type = document.getElementById('heatmap-type-select').value;
             const monthSelect = document.getElementById('heatmap-month-select');
-            const grid = document.getElementById('heatmap-grid');
-            const numbersDiv = document.getElementById('heatmap-month-numbers');
-            grid.innerHTML = '';
-            numbersDiv.innerHTML = '';
+            const container = document.getElementById('heatmap-container-content');
             const year = new Date().getFullYear();
+            const monthNames = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+            
             if (type === 'year') {
                 monthSelect.style.display = 'none';
-                grid.style.gridTemplateColumns = 'repeat(31, 1fr)';
+                let html = '<div class="heatmap-year-blocks">';
                 for (let month = 0; month < 12; month++) {
-                    const monthNum = document.createElement('div');
-                    monthNum.style.height = '20px'; monthNum.style.lineHeight = '20px';
-                    monthNum.style.fontSize = '0.7rem'; monthNum.style.color = 'var(--text-3)';
-                    monthNum.style.paddingRight = '4px'; monthNum.textContent = month + 1;
-                    numbersDiv.appendChild(monthNum);
                     const daysInMonth = new Date(year, month + 1, 0).getDate();
-                    for (let day = 1; day <= 31; day++) {
-                        const cell = document.createElement('div'); cell.className = 'heatmap-cell';
-                        if (day <= daysInMonth) {
-                            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                            const perc = getDayPercentage(dateStr);
-                            cell.style.backgroundColor = getHeatmapColor(perc);
-                            cell.title = `${dateStr}: ${perc !== null ? perc + '%' : 'brak danych'}`;
-                        } else { cell.style.visibility = 'hidden'; }
-                        grid.appendChild(cell);
+                    html += `<div class="heatmap-month-block">`;
+                    html += `<div class="heatmap-month-title">${monthNames[month]}</div>`;
+                    html += `<div class="heatmap-days-flex">`;
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                        const perc = getDayPercentage(dateStr);
+                        const color = getHeatmapColor(perc);
+                        html += `<div class="heatmap-cell" style="background-color:${color};" title="${dateStr}: ${perc !== null ? perc + '%' : 'brak danych'}"></div>`;
                     }
+                    html += `</div></div>`;
                 }
+                html += '</div>';
+                container.innerHTML = html;
             } else {
                 monthSelect.style.display = 'inline-block';
                 const month = parseInt(monthSelect.value);
                 const firstDay = new Date(year, month, 1);
                 const startDate = new Date(firstDay);
                 startDate.setDate(1 - (firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1));
-                grid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                numbersDiv.innerHTML = '';
+                let html = '<div class="heatmap-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;">';
                 for (let i = 0; i < 42; i++) {
                     const cellDate = new Date(startDate);
                     cellDate.setDate(startDate.getDate() + i);
@@ -833,12 +903,10 @@
                     let perc = null;
                     if (isCurrentMonth) perc = getDayPercentage(dateStr);
                     const color = isCurrentMonth ? getHeatmapColor(perc) : 'transparent';
-                    const cell = document.createElement('div'); cell.className = 'heatmap-cell';
-                    cell.style.backgroundColor = color;
-                    if (isCurrentMonth) cell.title = `${dateStr}: ${perc !== null ? perc + '%' : 'brak danych'}`;
-                    else cell.style.visibility = 'hidden';
-                    grid.appendChild(cell);
+                    html += `<div class="heatmap-cell" style="background-color:${color}; ${!isCurrentMonth ? 'visibility:hidden;' : ''}" title="${isCurrentMonth ? dateStr + ': ' + (perc !== null ? perc + '%' : 'brak danych') : ''}"></div>`;
                 }
+                html += '</div>';
+                container.innerHTML = html;
             }
         }
         function renderLifePanel() {
