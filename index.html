@@ -579,82 +579,58 @@
             if(!tpl) return null;
             const ds = formatDate(date);
 
-            // Znajdź ostatni wykonany trening z tym szablonem
-            const completedEntries = Object.entries(workouts)
-                .filter(([d,w]) => w.templateId===templateId && d<ds && w.status==='completed')
-                .sort(([a],[b]) => a<b?1:-1);
-            const lastCompletedDs = completedEntries[0]?.[0] || null;
+            // Całkowita liczba wykonanych treningów z tym szablonem przed datą
+            const totalCompleted = Object.entries(workouts)
+                .filter(([d,w]) => w.templateId===templateId && d<ds && w.status==='completed').length;
 
-            // Policz ile razy szablon wypada w harmonogramie w danym przedziale
-            const dayOfWeek = Object.entries(templateAssignments)
+            // Dni wg harmonogramu z tym szablonem (dla podglądu gdy brak wykonanych)
+            const scheduledDays = Object.entries(templateAssignments)
                 .filter(([,tId]) => tId===templateId).map(([dow]) => +dow);
 
-            function countScheduledBetween(fromDs, toDs) {
-                if (dayOfWeek.length === 0) return 0;
+            function countScheduledBefore(toDs) {
+                if (scheduledDays.length === 0) return 0;
                 let count = 0;
-                const cur = new Date(fromDs + 'T12:00:00');
-                cur.setDate(cur.getDate()+1); // nie wliczaj dnia startowego
+                const cur = new Date(date.getFullYear(), 0, 1);
                 while (formatDate(cur) < toDs) {
-                    if (dayOfWeek.includes(cur.getDay())) count++;
+                    if (scheduledDays.includes(cur.getDay())) count++;
                     cur.setDate(cur.getDate()+1);
                 }
                 return count;
             }
 
-            let stepsBase, baseSets;
+            // Baza licznika: wykonane treningi jeśli są, inaczej zaplanowane w harmonogramie
+            const countBase = totalCompleted > 0 ? totalCompleted : countScheduledBefore(ds);
 
-            if (lastCompletedDs) {
-                // Baza = ciężary z ostatniego wykonanego treningu (szablon już zaktualizowany)
-                // Liczymy ile sesji minęło OD ostatniego wykonanego do tej daty
-                const sessionsSinceLast = countScheduledBetween(lastCompletedDs, ds);
-                const exTemplate = tpl.exercises;
-                return {
-                    type:'strength', deload:false, templateId, status:'planned', notes:'',
-                    exercises: exTemplate.map((ex,i) => {
-                        const perc = ex.progressionPercent ?? tpl.progressionPercent;
-                        const sess = ex.progressionSessions ?? tpl.progressionSessions;
-                        const steps = Math.floor(sessionsSinceLast / sess);
-                        // Baza = actualSets z szablonu (ostatni wykonany) lub startWeight
-                        const base = ex.actualSets && ex.actualSets.length
-                            ? ex.actualSets
-                            : Array(ex.sets).fill(null).map(()=>({reps:8,w:ex.startWeight||20,rpe:8}));
-                        const newSets = Array(ex.sets).fill(null).map((_,si) => {
-                            const s = base[si] || base[base.length-1] || {reps:8,w:ex.startWeight||20,rpe:8};
-                            let w = s.w;
-                            for(let j=0;j<steps;j++) w = w*(1+perc/100);
-                            return {reps:s.reps, w:Math.round(w/2.5)*2.5, rpe:s.rpe};
-                        });
-                        return {id:ex.name+Date.now()+i+Math.random(), name:ex.name, sets:ex.sets,
-                            plannedWeight:newSets[0].w, actualSets:newSets, templateExercise:true};
-                    })
-                };
-            } else {
-                // Brak wykonanych – liczymy od początku na podstawie harmonogramu
-                const startDs = formatDate(new Date(date.getFullYear(), 0, 1));
-                const countFromStart = dayOfWeek.length > 0
-                    ? countScheduledBetween(startDs, ds) + (dayOfWeek.includes(new Date(startDs+'T12:00:00').getDay()) ? 1 : 0)
-                    : Object.entries(workouts).filter(([d,w])=>w.templateId===templateId&&d<ds).length;
+            const exercises = tpl.exercises.map((ex, i) => {
+                const perc = ex.progressionPercent ?? tpl.progressionPercent;
+                const sess = ex.progressionSessions ?? tpl.progressionSessions;
+
+                // Kroki progresji zawsze od startWeight
+                const steps = Math.floor(countBase / sess);
+                let weight = ex.startWeight || 20;
+                for (let j=0; j<steps; j++) weight = weight * (1 + perc/100);
+                weight = Math.round(weight / 2.5) * 2.5;
+
+                // Per-set: waga z progresji, reps/rpe z actualSets szablonu
+                const baseSets = ex.actualSets && ex.actualSets.length
+                    ? ex.actualSets
+                    : Array(ex.sets).fill(null).map(() => ({reps:8, w:ex.startWeight||20, rpe:8}));
+
+                const newSets = Array(ex.sets).fill(null).map((_, si) => {
+                    const s = baseSets[si] || baseSets[baseSets.length-1] || {reps:8, rpe:8};
+                    return { reps: s.reps, w: weight, rpe: s.rpe };
+                });
 
                 return {
-                    type:'strength', deload:false, templateId, status:'planned', notes:'',
-                    exercises: tpl.exercises.map((ex,i) => {
-                        const perc = ex.progressionPercent ?? tpl.progressionPercent;
-                        const sess = ex.progressionSessions ?? tpl.progressionSessions;
-                        const steps = Math.floor(countFromStart / sess);
-                        const base = ex.actualSets && ex.actualSets.length
-                            ? ex.actualSets
-                            : Array(ex.sets).fill(null).map(()=>({reps:8,w:ex.startWeight||20,rpe:8}));
-                        const newSets = Array(ex.sets).fill(null).map((_,si) => {
-                            const s = base[si] || base[base.length-1] || {reps:8,w:ex.startWeight||20,rpe:8};
-                            let w = s.w;
-                            for(let j=0;j<steps;j++) w = w*(1+perc/100);
-                            return {reps:s.reps, w:Math.round(w/2.5)*2.5, rpe:s.rpe};
-                        });
-                        return {id:ex.name+Date.now()+i+Math.random(), name:ex.name, sets:ex.sets,
-                            plannedWeight:newSets[0].w, actualSets:newSets, templateExercise:true};
-                    })
+                    id: ex.name+Date.now()+i+Math.random(),
+                    name: ex.name, sets: ex.sets,
+                    plannedWeight: weight,
+                    actualSets: newSets,
+                    templateExercise: true
                 };
-            }
+            });
+
+            return { type:'strength', deload:false, templateId, exercises, status:'planned', notes:'' };
         }
 
         // ---------- TRENING ----------
