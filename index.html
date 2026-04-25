@@ -361,7 +361,7 @@
             <h4 id="template-form-title">Nowy szablon</h4><input type="hidden" id="edit-template-id">
             <div class="tpl-form-fields">
                 <label>Nazwa: <input type="text" id="template-name" style="width:180px;"></label>
-                <label>Progresja: +<input type="number" id="template-progress-percent" value="5" min="0" max="20" step="0.5" style="width:68px;">% co <input type="number" id="template-progress-sessions" value="3" min="1" style="width:68px;"> treningi</label>
+                <label>Progresja: +<input type="number" id="template-progress-kg" value="2.5" min="0" step="0.5" style="width:68px;"> kg co <input type="number" id="template-progress-sessions" value="3" min="1" style="width:68px;"> treningi</label>
             </div>
             <h5>Ćwiczenia</h5>
             <div class="table-responsive"><table id="template-exercises-table"><thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Progresja</th><th></th></tr></thead><tbody></tbody></table></div>
@@ -515,8 +515,8 @@
         // ---------- LOCALSTORAGE ----------
         function loadData() {
             const saved = localStorage.getItem('cykl_pro_serie');
-            if(saved) { try { const data = JSON.parse(saved); workouts = data.workouts || {}; exerciseHistory = data.exerciseHistory || {}; weeklyTemplate = data.weeklyTemplate || weeklyTemplate; templateAssignments = data.templateAssignments || {}; templates = data.templates || []; templateUsageCount = data.templateUsageCount || {}; userHeight = data.userHeight || 175; userWeight = data.userWeight || 70; restingHR = data.restingHR || 60; personalRecords = data.personalRecords || {}; weightHistory = data.weightHistory || {}; reminderTime = data.reminderTime || '08:00'; Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; }); Object.keys(workouts).forEach(ds => { const w = workouts[ds]; if (w.type === 'rest' && w.status === 'planned' && !w.notes && !(w.exercises && w.exercises.length)) delete workouts[ds]; }); } catch(e){} }
-            if(templates.length === 0) { templates.push({ id: 'tpl1', name: 'Push A', progressionPercent: 5, progressionSessions: 3, exercises: [ { name: 'Wyciskanie sztangi leżąc', sets: 4, startWeight: 80, actualSets: Array(4).fill(null).map(()=>({reps:8, w:80, rpe:8})) }, { name: 'Wyciskanie żołnierskie', sets: 3, startWeight: 40, actualSets: Array(3).fill(null).map(()=>({reps:10, w:40, rpe:8})) } ]}); templates.push({ id: 'tpl2', name: 'Pull A', progressionPercent: 5, progressionSessions: 3, exercises: [ { name: 'Martwy ciąg', sets: 3, startWeight: 100, actualSets: Array(3).fill(null).map(()=>({reps:6, w:100, rpe:8})) }, { name: 'Podciąganie', sets: 3, startWeight: 0, actualSets: Array(3).fill(null).map(()=>({reps:6, w:0, rpe:8})) } ]}); templateUsageCount = { 'tpl1': 0, 'tpl2': 0 }; }
+            if(saved) { try { const data = JSON.parse(saved); workouts = data.workouts || {}; exerciseHistory = data.exerciseHistory || {}; weeklyTemplate = data.weeklyTemplate || weeklyTemplate; templateAssignments = data.templateAssignments || {}; templates = data.templates || []; templateUsageCount = data.templateUsageCount || {}; userHeight = data.userHeight || 175; userWeight = data.userWeight || 70; restingHR = data.restingHR || 60; personalRecords = data.personalRecords || {}; weightHistory = data.weightHistory || {}; reminderTime = data.reminderTime || '08:00'; Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; }); Object.keys(workouts).forEach(ds => { const w = workouts[ds]; if (w.type === 'rest' && w.status === 'planned' && !w.notes && !(w.exercises && w.exercises.length) && !w.manuallyDeleted) delete workouts[ds]; }); } catch(e){} }
+            if(templates.length === 0) { templates.push({ id: 'tpl1', name: 'Push A', progressionKg: 2.5, progressionSessions: 3, exercises: [ { name: 'Wyciskanie sztangi leżąc', sets: 4, startWeight: 80, actualSets: Array(4).fill(null).map(()=>({reps:8, w:80, rpe:8})) }, { name: 'Wyciskanie żołnierskie', sets: 3, startWeight: 40, actualSets: Array(3).fill(null).map(()=>({reps:10, w:40, rpe:8})) } ]}); templates.push({ id: 'tpl2', name: 'Pull A', progressionKg: 2.5, progressionSessions: 3, exercises: [ { name: 'Martwy ciąg', sets: 3, startWeight: 100, actualSets: Array(3).fill(null).map(()=>({reps:6, w:100, rpe:8})) }, { name: 'Podciąganie', sets: 3, startWeight: 0, actualSets: Array(3).fill(null).map(()=>({reps:6, w:0, rpe:8})) } ]}); templateUsageCount = { 'tpl1': 0, 'tpl2': 0 }; }
             document.getElementById('user-height').value = userHeight;
             document.getElementById('user-weight').value = userWeight;
             document.getElementById('resting-hr').value = restingHR;
@@ -577,56 +577,27 @@
         function generateWorkoutFromTemplate(date, templateId) {
             const tpl = templates.find(t=>t.id===templateId);
             if(!tpl) return null;
-            const ds = formatDate(date);
 
-            // Całkowita liczba wykonanych treningów z tym szablonem przed datą
-            const totalCompleted = Object.entries(workouts)
-                .filter(([d,w]) => w.templateId===templateId && d<ds && w.status==='completed').length;
-
-            // Dni wg harmonogramu z tym szablonem (dla podglądu gdy brak wykonanych)
-            const scheduledDays = Object.entries(templateAssignments)
-                .filter(([,tId]) => tId===templateId).map(([dow]) => +dow);
-
-            function countScheduledBefore(toDs) {
-                if (scheduledDays.length === 0) return 0;
-                let count = 0;
-                const cur = new Date(date.getFullYear(), 0, 1);
-                while (formatDate(cur) < toDs) {
-                    if (scheduledDays.includes(cur.getDay())) count++;
-                    cur.setDate(cur.getDate()+1);
-                }
-                return count;
-            }
-
-            // Baza licznika: wykonane treningi jeśli są, inaczej zaplanowane w harmonogramie
-            const countBase = totalCompleted > 0 ? totalCompleted : countScheduledBefore(ds);
+            // Globalny licznik wykonanych – cały czas rośnie, nigdy nie resetuje
+            const count = templateUsageCount[templateId] || 0;
 
             const exercises = tpl.exercises.map((ex, i) => {
-                const perc = ex.progressionPercent ?? tpl.progressionPercent;
-                const sess = ex.progressionSessions ?? tpl.progressionSessions;
+                const kg   = ex.progressionKg   ?? tpl.progressionKg   ?? 2.5;
+                const sess = ex.progressionSessions ?? tpl.progressionSessions ?? 3;
+                const steps = Math.floor(count / sess);
 
-                // Kroki progresji od countBase
-                const steps = Math.floor(countBase / sess);
-
-                // Oryginalne ciężary per seria (startSets) – nigdy nie zmieniane po wykonaniu
+                // startSets = ORYGINALNE ciężary (nigdy nie zmieniane po zapisie szablonu)
                 const startSets = ex.startSets && ex.startSets.length
                     ? ex.startSets
-                    : ex.actualSets && ex.actualSets.length
-                        ? ex.actualSets
-                        : Array(ex.sets).fill(null).map(() => ({reps:8, w:ex.startWeight||20, rpe:8}));
+                    : Array(ex.sets).fill(null).map(() => ({reps:8, w:ex.startWeight||20, rpe:8}));
 
-                // Aktualne reps/rpe (actualSets) – aktualizowane po każdym wykonaniu
-                const repsSets = ex.actualSets && ex.actualSets.length
-                    ? ex.actualSets
-                    : startSets;
+                // actualSets = reps/rpe z ostatniego wykonanego treningu
+                const repsSets = ex.actualSets && ex.actualSets.length ? ex.actualSets : startSets;
 
                 const newSets = Array(ex.sets).fill(null).map((_, si) => {
                     const sw = startSets[si] || startSets[startSets.length-1];
-                    const rs = repsSets[si] || repsSets[repsSets.length-1];
-                    // Progresja liczona od oryginalnego ciężaru tej serii
-                    let w = sw.w;
-                    for (let j=0; j<steps; j++) w = w * (1 + perc/100);
-                    return { reps: rs.reps, w: Math.round(w/2.5)*2.5, rpe: rs.rpe };
+                    const rs = repsSets[si]  || repsSets[repsSets.length-1];
+                    return { reps: rs.reps, w: sw.w + steps * kg, rpe: rs.rpe };
                 });
 
                 return {
@@ -666,10 +637,13 @@
                     if (generated) w = generated;
                 }
                 if (w.type !== 'rest') { workouts[ds]=w; saveData(); }
+            } else if (w.manuallyDeleted) {
+                // Dzień ręcznie usunięty – nie regeneruj, pokaż jako odpoczynek
             } else if (w.status==='planned' && w.templateId && w.type==='strength') {
                 const refreshed = generateWorkoutFromTemplate(selectedDate, w.templateId);
                 if (refreshed) {
                     refreshed.notes = w.notes||'';
+                    refreshed.plannedVolume = w.plannedVolume; // zachowaj bazowe obciążenie
                     refreshed.exercises.forEach(newEx => {
                         const old = (w.exercises||[]).find(e=>e.name===newEx.name);
                         if (old) { newEx.collapsed=old.collapsed; newEx.done=old.done; if(old.manuallyEdited){newEx.actualSets=old.actualSets; newEx.manuallyEdited=true;} }
@@ -687,7 +661,9 @@
             document.getElementById('complete-workout-btn').textContent = w.status === 'completed' ? '✅ Wykonano' : '🏁 Trening skończony';
             toggleWorkoutView(w.type);
             if(w.type==='strength') {
-                originalWorkoutVolume = calculateVolumeFromExercises(w.exercises);
+                // Zapamiętaj planowane obciążenie raz na zawsze – przed jakimkolwiek refreshem
+                if (!w.plannedVolume) { w.plannedVolume = calculateVolumeFromExercises(w.exercises); saveData(); }
+                originalWorkoutVolume = w.plannedVolume;
                 renderStrengthExercises(w.exercises);
                 const currentVol = calculateVolumeFromExercises(w.exercises);
                 document.getElementById('total-volume').textContent = currentVol;
@@ -706,6 +682,31 @@
         }
         function toggleWorkoutView(type) { document.getElementById('strength-view').style.display = type==='strength'?'block':'none'; document.getElementById('cardio-view').style.display = (type==='run'||type==='home')?'block':'none'; }
         // Zapisuje wartości inline do ex.actualSets
+        // Przelicza objętość na bieżąco z wartości w DOM (inputy inline)
+        function updateVolumeFromDOM(w) {
+            let vol = 0;
+            (w.exercises || []).forEach((ex, idx) => {
+                if (ex.collapsed) {
+                    (ex.actualSets || []).forEach(s => { vol += (parseFloat(s.w)||0) * (parseFloat(s.reps)||0); });
+                } else {
+                    (ex.actualSets || []).forEach((s, si) => {
+                        if (s.done) {
+                            // Seria wykonana – bierz z actualSets (brak inputów w DOM)
+                            vol += (parseFloat(s.w)||0) * (parseFloat(s.reps)||0);
+                        } else {
+                            const wInp = document.getElementById(`s-${idx}-${si}-w`);
+                            const rInp = document.getElementById(`s-${idx}-${si}-r`);
+                            vol += (wInp ? parseFloat(wInp.value)||0 : parseFloat(s.w)||0) *
+                                   (rInp ? parseFloat(rInp.value)||0 : parseFloat(s.reps)||0);
+                        }
+                    });
+                }
+            });
+            vol = Math.round(vol * 10) / 10;
+            document.getElementById('total-volume').textContent = vol;
+            updateVolumeDiffDisplay(vol);
+        }
+
         function saveInlineValues(idx, w) {
             if (!w || !w.exercises[idx]) return;
             const ex = w.exercises[idx];
@@ -763,16 +764,26 @@
                     actualSets.forEach((s,i)=>{
                         let dReps=s.reps, dWeight=s.w;
                         if(deloadActive){dReps=Math.max(1,Math.round(s.reps*(1-dr))); dWeight=rnd(s.w*(1-dw));}
-                        seriesHtml+=`<div class="series-editor-row" style="margin:4px 0;">
-                            <span style="font-weight:700;min-width:64px;font-size:0.85rem;">Seria ${i+1}</span>
-                            <div style="display:flex;align-items:center;gap:5px;"><span style="color:var(--text-2);font-size:0.82rem;">Powt.:</span>
-                            <div class="number-control"><button class="btn-sm ser-rep-down" data-ex="${idx}" data-ser="${i}">−</button><input id="s-${idx}-${i}-r" class="editable" value="${dReps}" style="width:52px"><button class="btn-sm ser-rep-up" data-ex="${idx}" data-ser="${i}">+</button></div></div>
-                            <div style="display:flex;align-items:center;gap:5px;"><span style="color:var(--text-2);font-size:0.82rem;">Ciężar:</span>
-                            <div class="number-control"><button class="btn-sm ser-w-down" data-ex="${idx}" data-ser="${i}">−</button><input id="s-${idx}-${i}-w" class="editable" value="${dWeight}" style="width:70px"><button class="btn-sm ser-w-up" data-ex="${idx}" data-ser="${i}">+</button></div>
-                            <span style="color:var(--text-3);font-size:0.82rem;">kg</span></div>
-                            <div style="display:flex;align-items:center;gap:5px;"><span style="color:var(--text-2);font-size:0.82rem;">RPE:</span>
-                            <div class="number-control"><button class="btn-sm ser-rpe-down" data-ex="${idx}" data-ser="${i}">−</button><input id="s-${idx}-${i}-rpe" class="editable" value="${s.rpe||8}" style="width:52px"><button class="btn-sm ser-rpe-up" data-ex="${idx}" data-ser="${i}">+</button></div></div>
-                        </div>`;
+                        if (s.done) {
+                            // Seria wykonana – kompaktowy widok
+                            seriesHtml+=`<div class="series-editor-row" data-ex="${idx}" data-ser="${i}" style="margin:4px 0;background:rgba(16,185,129,0.08);border-radius:6px;padding:6px 10px;display:flex;align-items:center;gap:10px;">
+                                <span style="font-weight:700;min-width:64px;font-size:0.85rem;color:var(--text-2);">Seria ${i+1}</span>
+                                <span style="color:var(--success);font-size:0.9rem;">✅ ${dWeight}kg × ${dReps} powt.</span>
+                                <button class="btn-sm ser-undone" data-ex="${idx}" data-ser="${i}" style="margin-left:auto;font-size:0.75rem;">↩</button>
+                            </div>`;
+                        } else {
+                            seriesHtml+=`<div class="series-editor-row" data-ex="${idx}" data-ser="${i}" style="margin:4px 0;">
+                                <span style="font-weight:700;min-width:64px;font-size:0.85rem;">Seria ${i+1}</span>
+                                <div style="display:flex;align-items:center;gap:5px;"><span style="color:var(--text-2);font-size:0.82rem;">Powt.:</span>
+                                <div class="number-control"><button class="btn-sm ser-rep-down" data-ex="${idx}" data-ser="${i}">−</button><input id="s-${idx}-${i}-r" class="editable" value="${dReps}" style="width:52px"><button class="btn-sm ser-rep-up" data-ex="${idx}" data-ser="${i}">+</button></div></div>
+                                <div style="display:flex;align-items:center;gap:5px;"><span style="color:var(--text-2);font-size:0.82rem;">Ciężar:</span>
+                                <div class="number-control"><button class="btn-sm ser-w-down" data-ex="${idx}" data-ser="${i}">−</button><input id="s-${idx}-${i}-w" class="editable" value="${dWeight}" style="width:70px"><button class="btn-sm ser-w-up" data-ex="${idx}" data-ser="${i}">+</button></div>
+                                <span style="color:var(--text-3);font-size:0.82rem;">kg</span></div>
+                                <div style="display:flex;align-items:center;gap:5px;"><span style="color:var(--text-2);font-size:0.82rem;">RPE:</span>
+                                <div class="number-control"><button class="btn-sm ser-rpe-down" data-ex="${idx}" data-ser="${i}">−</button><input id="s-${idx}-${i}-rpe" class="editable" value="${s.rpe||8}" style="width:52px"><button class="btn-sm ser-rpe-up" data-ex="${idx}" data-ser="${i}">+</button></div></div>
+                                <button class="btn-sm ser-done-btn" data-ex="${idx}" data-ser="${i}" style="background:var(--success);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.8rem;cursor:pointer;">✅</button>
+                            </div>`;
+                        }
                     });
                     row.innerHTML=`<td colspan="5">
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0;margin-bottom:8px;">
@@ -803,7 +814,10 @@
             document.querySelectorAll('.collapse-icon').forEach(icon=>{
                 icon.addEventListener('click',()=>{
                     const idx=+icon.dataset.idx;
-                    if (!w.exercises[idx].collapsed) saveInlineValues(idx,w);
+                    if (!w.exercises[idx].collapsed) {
+                        saveInlineValues(idx,w);
+                        w.exercises[idx].manuallyEdited=true;
+                    }
                     w.exercises[idx].collapsed=!w.exercises[idx].collapsed;
                     renderWorkoutPanel(); saveData();
                 });
@@ -836,28 +850,78 @@
             }));
             // Usuwanie
             document.querySelectorAll('.remove-exercise').forEach(b=>b.addEventListener('click',()=>{
-                if(!confirm('Usunąć ćwiczenie?')) return;
-                const exName=w.exercises[b.dataset.idx].name;
-                w.exercises.splice(b.dataset.idx,1);
-                if(exerciseHistory[exName]){exerciseHistory[exName]=exerciseHistory[exName].filter(e=>e.date!==formatDate(selectedDate)); if(!exerciseHistory[exName].length) delete exerciseHistory[exName];}
-                renderWorkoutPanel(); saveData();
+                const ds=formatDate(selectedDate);
+                const fresh=workouts[ds]; if(!fresh) return;
+                const idx=+b.dataset.idx;
+                const exName=fresh.exercises[idx]?.name;
+                // Inline potwierdzenie zamiast confirm()
+                const td=b.closest('td');
+                if (td.querySelector('.remove-confirm-row')) return; // już pokazane
+                const confirmRow=document.createElement('div');
+                confirmRow.className='remove-confirm-row';
+                confirmRow.style.cssText='display:flex;gap:8px;align-items:center;margin-top:8px;padding:6px;background:rgba(239,68,68,0.1);border-radius:6px;';
+                confirmRow.innerHTML=`<span style="font-size:0.82rem;flex:1;">Usunąć ćwiczenie?</span><button class="btn btn-sm rc-no">Nie</button><button class="btn btn-danger btn-sm rc-yes">Usuń</button>`;
+                td.appendChild(confirmRow);
+                confirmRow.querySelector('.rc-no').onclick=()=>confirmRow.remove();
+                confirmRow.querySelector('.rc-yes').onclick=()=>{
+                    fresh.exercises.splice(idx,1);
+                    if(exName&&exerciseHistory[exName]){exerciseHistory[exName]=exerciseHistory[exName].filter(e=>e.date!==ds); if(!exerciseHistory[exName].length) delete exerciseHistory[exName];}
+                    renderWorkoutPanel(); saveData();
+                };
             }));
             // Inline powt/cięż/RPE
             document.querySelectorAll('.ser-rep-up,.ser-rep-down').forEach(b=>b.addEventListener('click',()=>{
-                const inp=document.getElementById(`s-${b.dataset.ex}-${b.dataset.ser}-r`); if(!inp) return;
+                const idx=+b.dataset.ex, si=+b.dataset.ser;
+                const inp=document.getElementById(`s-${idx}-${si}-r`); if(!inp) return;
                 inp.value=b.classList.contains('ser-rep-up')?+inp.value+1:Math.max(1,+inp.value-1);
+                if(w.exercises[idx]?.actualSets?.[si]) { w.exercises[idx].actualSets[si].reps=+inp.value; w.exercises[idx].manuallyEdited=true; }
+                updateVolumeFromDOM(w);
             }));
             document.querySelectorAll('.ser-w-up,.ser-w-down').forEach(b=>b.addEventListener('click',()=>{
-                const inp=document.getElementById(`s-${b.dataset.ex}-${b.dataset.ser}-w`); if(!inp) return;
+                const idx=+b.dataset.ex, si=+b.dataset.ser;
+                const inp=document.getElementById(`s-${idx}-${si}-w`); if(!inp) return;
                 let v=parseFloat(inp.value)||0;
-                inp.value=Math.round((b.classList.contains('ser-w-up')?v+2.5:Math.max(0,v-2.5))*2)/2;
+                v=Math.round((b.classList.contains('ser-w-up')?v+2.5:Math.max(0,v-2.5))*2)/2;
+                inp.value=v;
+                if(w.exercises[idx]?.actualSets?.[si]) { w.exercises[idx].actualSets[si].w=v; w.exercises[idx].manuallyEdited=true; }
+                updateVolumeFromDOM(w);
             }));
             document.querySelectorAll('.ser-rpe-up,.ser-rpe-down').forEach(b=>b.addEventListener('click',()=>{
-                const inp=document.getElementById(`s-${b.dataset.ex}-${b.dataset.ser}-rpe`); if(!inp) return;
+                const idx=+b.dataset.ex, si=+b.dataset.ser;
+                const inp=document.getElementById(`s-${idx}-${si}-rpe`); if(!inp) return;
                 let v=parseFloat(inp.value)||8;
-                inp.value=Math.round((b.classList.contains('ser-rpe-up')?Math.min(10,v+0.5):Math.max(1,v-0.5))*2)/2;
+                v=Math.round((b.classList.contains('ser-rpe-up')?Math.min(10,v+0.5):Math.max(1,v-0.5))*2)/2;
+                inp.value=v;
+                if(w.exercises[idx]?.actualSets?.[si]) { w.exercises[idx].actualSets[si].rpe=v; w.exercises[idx].manuallyEdited=true; }
             }));
-            // Wykonane
+            // Wykonane seria – zapisz i zastąp DOM bez pełnego re-renderu
+            document.querySelectorAll('.ser-done-btn').forEach(b=>b.addEventListener('click',()=>{
+                const idx=+b.dataset.ex, si=+b.dataset.ser;
+                const rInp=document.getElementById(`s-${idx}-${si}-r`);
+                const wInp=document.getElementById(`s-${idx}-${si}-w`);
+                const rpeInp=document.getElementById(`s-${idx}-${si}-rpe`);
+                const rv=rInp?+rInp.value:(w.exercises[idx]?.actualSets?.[si]?.reps||8);
+                const wv=wInp?parseFloat(wInp.value):(w.exercises[idx]?.actualSets?.[si]?.w||20);
+                const rpev=rpeInp?parseFloat(rpeInp.value):(w.exercises[idx]?.actualSets?.[si]?.rpe||8);
+                if(w.exercises[idx]?.actualSets?.[si]) {
+                    w.exercises[idx].actualSets[si]={reps:rv,w:wv,rpe:rpev,done:true};
+                    w.exercises[idx].manuallyEdited=true;
+                }
+                // Zastąp tylko ten wiersz serii
+                const serDiv=document.querySelector(`.series-editor-row[data-ex="${idx}"][data-ser="${si}"]`);
+                if(serDiv) serDiv.outerHTML=`<div class="series-editor-row" data-ex="${idx}" data-ser="${si}" style="margin:4px 0;background:rgba(16,185,129,0.08);border-radius:6px;padding:6px 10px;display:flex;align-items:center;gap:10px;"><span style="font-weight:700;min-width:64px;font-size:0.85rem;color:var(--text-2);">Seria ${si+1}</span><span style="color:var(--success);font-size:0.9rem;">✅ ${wv}kg × ${rv} powt.</span><button class="btn-sm ser-undone" data-ex="${idx}" data-ser="${si}" style="margin-left:auto;font-size:0.75rem;">↩</button></div>`;
+                // Re-bind undone dla nowego elementu
+                const newDiv=document.querySelector(`.series-editor-row[data-ex="${idx}"][data-ser="${si}"]`);
+                newDiv?.querySelector('.ser-undone')?.addEventListener('click',()=>{ if(w.exercises[idx]?.actualSets?.[si]) { w.exercises[idx].actualSets[si].done=false; } saveData(); renderWorkoutPanel(); });
+                updateVolumeFromDOM(w); saveData();
+            }));
+            // Cofnij wykonanie serii
+            document.querySelectorAll('.ser-undone').forEach(b=>b.addEventListener('click',()=>{
+                const idx=+b.dataset.ex, si=+b.dataset.ser;
+                if(w.exercises[idx]?.actualSets?.[si]) w.exercises[idx].actualSets[si].done=false;
+                saveData(); renderWorkoutPanel();
+            }));
+            // Wykonane ćwiczenie (całe)
             document.querySelectorAll('.done-exercise-btn').forEach(b=>b.addEventListener('click',()=>{
                 const idx=+b.dataset.idx;
                 saveInlineValues(idx,w);
@@ -939,12 +1003,29 @@
             document.getElementById('save-sets').onclick = () => saveChanges(false);
             document.getElementById('done-sets').onclick = () => saveChanges(true);
         }
-        function addExercise(name) { const d = formatDate(selectedDate); if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, status:'planned', notes:'' }; workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedWeight:20, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), templateExercise: false, collapsed: false }); renderWorkoutPanel(); saveData(); }
+        function addExercise(name) { const d = formatDate(selectedDate); if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, status:'planned', notes:'' }; workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedWeight:20, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), templateExercise: false, collapsed: false }); delete workouts[d].plannedVolume; renderWorkoutPanel(); saveData(); }
 
         // ---------- AKTUALIZACJA SZABLONU ----------
-        function updateTemplateFromWorkout(templateId, workoutExercises) { const tpl = templates.find(t => t.id === templateId); if (!tpl) return; let changed = false; workoutExercises.forEach(wEx => { const tplEx = tpl.exercises.find(e => e.name === wEx.name); if (!tplEx) return; if (wEx.actualSets && wEx.actualSets.length) { tplEx.actualSets = JSON.parse(JSON.stringify(wEx.actualSets)); } if (wEx.sets !== tplEx.sets) { tplEx.sets = wEx.sets; changed = true; } }); if (changed) { saveData(); if (document.getElementById('templates-panel').classList.contains('active')) renderTemplatesPanel(); } }
-        function resetWorkoutToPlanned(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w || w.status === 'planned') return; const wasCompleted = w.status === 'completed'; w.status = 'planned'; if (wasCompleted) { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); if (w.templateId && w.type === 'strength' && !w.deload) templateUsageCount[w.templateId] = Math.max(0, (templateUsageCount[w.templateId] || 1) - 1); } if(w.exercises) w.exercises.forEach(ex=>{ex.done=false; ex.collapsed=true;}); saveData(); renderCalendar(); renderWorkoutPanel(); }
-        function deleteWorkout(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w) return; if (w.status === 'completed') { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); if (w.templateId && w.type === 'strength' && !w.deload) templateUsageCount[w.templateId] = Math.max(0, (templateUsageCount[w.templateId] || 1) - 1); } delete workouts[ds]; saveData(); renderCalendar(); if (formatDate(selectedDate) === ds) { selectedDate.setDate(selectedDate.getDate()+1); renderWorkoutPanel(); } }
+        function updateTemplateFromWorkout(templateId, workoutExercises) {
+            const tpl = templates.find(t => t.id === templateId);
+            if (!tpl) return;
+            workoutExercises.forEach(wEx => {
+                const tplEx = tpl.exercises.find(e => e.name === wEx.name);
+                if (!tplEx) return;
+                if (wEx.actualSets && wEx.actualSets.length) {
+                    // Tylko reps i rpe – startSets NIGDY się nie zmienia (baza progresji)
+                    tplEx.actualSets = wEx.actualSets.map(s => ({reps:s.reps, w:s.w, rpe:s.rpe}));
+                }
+                tplEx.sets = wEx.sets;
+            });
+            // Licznik rośnie – NIGDY nie resetuj
+            templateUsageCount[templateId] = (templateUsageCount[templateId] || 0) + 1;
+            saveData();
+            if (document.getElementById('templates-panel').classList.contains('active')) renderTemplatesPanel();
+        }
+        function resetWorkoutToPlanned(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w || w.status === 'planned') return; const wasCompleted = w.status === 'completed'; w.status = 'planned'; delete w.plannedVolume; if (wasCompleted) { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); if (w.templateId && w.type === 'strength' && !w.deload) templateUsageCount[w.templateId] = Math.max(0, (templateUsageCount[w.templateId] || 1) - 1); } if(w.exercises) w.exercises.forEach(ex=>{ex.done=false; ex.collapsed=true;}); saveData(); renderCalendar(); renderWorkoutPanel(); }
+        function deleteWorkout(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w) return; if (w.status === 'completed') { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); if (w.templateId && w.type === 'strength' && !w.deload) templateUsageCount[w.templateId] = Math.max(0, (templateUsageCount[w.templateId] || 1) - 1); } // Zapisz flagę zamiast usuwać – zapobiega regeneracji z szablonu
+            workouts[ds] = { type: 'rest', status: 'planned', notes: '', manuallyDeleted: true }; saveData(); renderCalendar(); renderWorkoutPanel(); }
         function updateHistory(date) {
             const w = workouts[formatDate(date)];
             if(!w||w.type!=='strength') return;
@@ -1057,20 +1138,20 @@
             else if(swapBanner.parentNode) swapBanner.parentNode.removeChild(swapBanner);
         }
         
-        function openDayEditor(date) { const ds = formatDate(date); const w = workouts[ds] || { type: weeklyTemplate[date.getDay()] || 'rest', status: 'planned' }; let html = `<h4>${date.toLocaleDateString('pl', {day:'numeric', month:'long', year:'numeric'})}</h4><div style="margin-bottom:12px;"><label style="font-size:0.85rem; font-weight:600; color:var(--text-2); display:block; margin-bottom:6px;">Typ treningu</label><select id="edit-day-type" style="width:100%;">`; ['rest','strength','run','home'].forEach(t => html += `<option value="${t}" ${w.type===t?'selected':''}>${t==='rest'?'😴 Odpoczynek':t==='strength'?'🏋️ Siłownia':t==='run'?'🏃 Bieg':'🧘 Dom'}</option>`); html += `</select></div><div id="edit-day-template-container" style="display:${w.type==='strength'?'block':'none'}; margin-bottom:12px;"><label style="font-size:0.85rem; font-weight:600; color:var(--text-2); display:block; margin-bottom:6px;">Szablon</label><select id="edit-day-template" style="width:100%;"><option value="">-- Brak --</option>`; templates.forEach(t => html += `<option value="${t.id}" ${w.templateId===t.id?'selected':''}>${t.name}</option>`); html += `</select></div><div style="display:flex; gap:8px; justify-content:space-between; margin-top:16px;"><button class="btn btn-danger btn-sm" id="delete-day-btn">🗑️ Usuń trening</button><button class="btn btn-primary" id="save-day">💾 Zapisz</button></div>`; const overlay = document.createElement('div'); overlay.className = 'modal-overlay'; const modal = document.createElement('div'); modal.className = 'modal-box'; modal.innerHTML = html; overlay.appendChild(modal); document.body.appendChild(overlay); overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); }); const typeSel = document.getElementById('edit-day-type'); const tplContainer = document.getElementById('edit-day-template-container'); typeSel.addEventListener('change', ()=> tplContainer.style.display = typeSel.value === 'strength' ? 'block' : 'none'); document.getElementById('delete-day-btn').addEventListener('click', ()=>{ if (confirm('Usunąć trening z tego dnia?')) { deleteWorkout(date); overlay.remove(); renderHarmonogramDays(); } }); document.getElementById('save-day').onclick = () => { const newType = typeSel.value; const tplId = newType === 'strength' ? document.getElementById('edit-day-template').value : null; if (newType === 'rest') delete workouts[ds]; else { if (!workouts[ds]) workouts[ds] = { type: newType, status: 'planned', deload: false, notes: '' }; else workouts[ds].type = newType; workouts[ds].templateId = tplId || undefined; if (newType === 'strength' && tplId) { const generated = generateWorkoutFromTemplate(date, tplId); if (generated) workouts[ds] = generated; } } saveData(); renderCalendar(); renderHarmonogramDays(); overlay.remove(); }; }
+        function openDayEditor(date) { const ds = formatDate(date); const w = workouts[ds] || { type: weeklyTemplate[date.getDay()] || 'rest', status: 'planned' }; let html = `<h4>${date.toLocaleDateString('pl', {day:'numeric', month:'long', year:'numeric'})}</h4><div style="margin-bottom:12px;"><label style="font-size:0.85rem; font-weight:600; color:var(--text-2); display:block; margin-bottom:6px;">Typ treningu</label><select id="edit-day-type" style="width:100%;">`; ['rest','strength','run','home'].forEach(t => html += `<option value="${t}" ${w.type===t?'selected':''}>${t==='rest'?'😴 Odpoczynek':t==='strength'?'🏋️ Siłownia':t==='run'?'🏃 Bieg':'🧘 Dom'}</option>`); html += `</select></div><div id="edit-day-template-container" style="display:${w.type==='strength'?'block':'none'}; margin-bottom:12px;"><label style="font-size:0.85rem; font-weight:600; color:var(--text-2); display:block; margin-bottom:6px;">Szablon</label><select id="edit-day-template" style="width:100%;"><option value="">-- Brak --</option>`; templates.forEach(t => html += `<option value="${t.id}" ${w.templateId===t.id?'selected':''}>${t.name}</option>`); html += `</select></div><div id="delete-confirm-row" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #EF4444;border-radius:8px;padding:10px;margin-bottom:10px;text-align:center;"><p style="margin:0 0 8px;font-weight:600;">Na pewno usunąć trening?</p><div style="display:flex;gap:8px;justify-content:center;"><button class="btn btn-sm" id="cancel-delete-day">Anuluj</button><button class="btn btn-danger btn-sm" id="confirm-delete-day">Usuń</button></div></div><div style="display:flex; gap:8px; justify-content:space-between; margin-top:16px;"><button class="btn btn-danger btn-sm" id="delete-day-btn">🗑️ Usuń trening</button><button class="btn btn-primary" id="save-day">💾 Zapisz</button></div>`; const overlay = document.createElement('div'); overlay.className = 'modal-overlay'; const modal = document.createElement('div'); modal.className = 'modal-box'; modal.innerHTML = html; overlay.appendChild(modal); document.body.appendChild(overlay); overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); }); const typeSel = document.getElementById('edit-day-type'); const tplContainer = document.getElementById('edit-day-template-container'); typeSel.addEventListener('change', ()=> tplContainer.style.display = typeSel.value === 'strength' ? 'block' : 'none'); document.getElementById('delete-day-btn').addEventListener('click', ()=>{ document.getElementById('delete-confirm-row').style.display='block'; }); document.getElementById('cancel-delete-day').addEventListener('click', ()=>{ document.getElementById('delete-confirm-row').style.display='none'; }); document.getElementById('confirm-delete-day').addEventListener('click', ()=>{ deleteWorkout(date); overlay.remove(); renderHarmonogramDays(); }); document.getElementById('save-day').onclick = () => { const newType = typeSel.value; const tplId = newType === 'strength' ? document.getElementById('edit-day-template').value : null; if (newType === 'rest') delete workouts[ds]; else { if (!workouts[ds]) workouts[ds] = { type: newType, status: 'planned', deload: false, notes: '' }; else workouts[ds].type = newType; workouts[ds].templateId = tplId || undefined; if (newType === 'strength' && tplId) { const generated = generateWorkoutFromTemplate(date, tplId); if (generated) workouts[ds] = generated; } } saveData(); renderCalendar(); renderHarmonogramDays(); overlay.remove(); }; }
 
         // ---------- SZABLONY ----------
         function buildExerciseSelectorHtml(currentVal) { const allEx = getAllKnownExercises(); let isKnown = currentVal && allEx.includes(currentVal); let options = allEx.map(e => `<option value="${e}" ${e===currentVal?'selected':''}>${e}</option>`).join(''); return `<select class="tpl-ex-name-sel" style="width:130px; margin-bottom:4px;"><option value="" ${!currentVal?'selected':''}>--Wybierz--</option>${options}<option value="__NEW__" ${!isKnown && currentVal ? 'selected' : ''}>➕ Inne...</option></select><input type="text" class="tpl-ex-name-inp" value="${!isKnown && currentVal ? currentVal : ''}" style="display:${!isKnown && currentVal ? 'block' : 'none'}; width:130px;">`; }
-        function renderTemplatesPanel() { const list = document.getElementById('templates-list'); list.innerHTML = templates.map(t => `<div class="template-card"><div class="template-header"><div class="template-title">${t.name}</div><div class="template-stats">📈 +${t.progressionPercent}% co ${t.progressionSessions} tr. | Wykonań: <strong>${templateUsageCount[t.id]||0}</strong></div><div class="template-actions"><button class="btn btn-sm edit-template" data-id="${t.id}">✏️ Edytuj</button><button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button></div></div><ul class="template-exercises">${t.exercises.map(e=>`<li>${e.name}: ${e.sets} serii</li>`).join('')}</ul></div>`).join(''); document.querySelectorAll('.edit-template').forEach(b => b.addEventListener('click', ()=> editTemplate(b.dataset.id))); document.querySelectorAll('.delete-template').forEach(b => b.addEventListener('click', ()=> { if (!confirm('Usunąć szablon?')) return; templates = templates.filter(t => t.id !== b.dataset.id); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); })); }
-        function editTemplate(id) { const tpl = templates.find(t => t.id === id); if(!tpl) return; document.getElementById('template-form-title').textContent = 'Edytuj szablon'; document.getElementById('edit-template-id').value = id; document.getElementById('template-name').value = tpl.name; document.getElementById('template-progress-percent').value = tpl.progressionPercent; document.getElementById('template-progress-sessions').value = tpl.progressionSessions; renderTemplateExercisesTable(tpl.exercises); document.getElementById('template-form').style.display = 'block'; }
-        function renderTemplateExercisesTable(exercises) { const tbody = document.querySelector('#template-exercises-table tbody'); tbody.innerHTML = ''; exercises.forEach((ex, idx) => { const row = document.createElement('tr'); row._actualSets = ex.actualSets ? JSON.parse(JSON.stringify(ex.actualSets)) : null; row._startSets = ex.startSets ? JSON.parse(JSON.stringify(ex.startSets)) : (ex.actualSets ? JSON.parse(JSON.stringify(ex.actualSets)) : null); row.innerHTML = `<td>${buildExerciseSelectorHtml(ex.name)}</td><td><div class="number-control"><button class="btn-sm tpl-set-down">−</button><input type="number" value="${ex.sets}" min="1" class="tpl-ex-sets" style="width:60px"><button class="btn-sm tpl-set-up">+</button></div></td><td><input type="number" placeholder="+%" class="tpl-ex-prog-perc" value="${ex.progressionPercent||''}" style="width:60px;"><input type="number" placeholder="co" class="tpl-ex-prog-sess" value="${ex.progressionSessions||''}" style="width:60px;"></td><td style="display:flex; gap:4px;"><button class="btn btn-sm edit-tpl-series-btn" data-idx="${idx}">✏️ Serie</button><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`; tbody.appendChild(row); const setInp = row.querySelector('.tpl-ex-sets'); row.querySelector('.tpl-set-up').addEventListener('click', ()=> setInp.value = +setInp.value + 1); row.querySelector('.tpl-set-down').addEventListener('click', ()=> setInp.value = Math.max(1, +setInp.value - 1)); row.querySelector('.edit-tpl-series-btn').addEventListener('click', ()=> editTemplateSeries(idx)); row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> { if (confirm('Usunąć ćwiczenie z szablonu?')) row.remove(); }); }); }
+        function renderTemplatesPanel() { const list = document.getElementById('templates-list'); list.innerHTML = templates.map(t => `<div class="template-card"><div class="template-header"><div class="template-title">${t.name}</div><div class="template-stats">📈 +${t.progressionKg ?? t.progressionPercent ?? 2.5}kg co ${t.progressionSessions} tr. | Wykonań: <strong>${templateUsageCount[t.id]||0}</strong></div><div class="template-actions"><button class="btn btn-sm edit-template" data-id="${t.id}">✏️ Edytuj</button><button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button></div></div><ul class="template-exercises">${t.exercises.map(e=>`<li>${e.name}: ${e.sets} serii</li>`).join('')}</ul></div>`).join(''); document.querySelectorAll('.edit-template').forEach(b => b.addEventListener('click', ()=> editTemplate(b.dataset.id))); document.querySelectorAll('.delete-template').forEach(b => b.addEventListener('click', ()=> { if (!confirm('Usunąć szablon?')) return; templates = templates.filter(t => t.id !== b.dataset.id); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); })); }
+        function editTemplate(id) { const tpl = templates.find(t => t.id === id); if(!tpl) return; document.getElementById('template-form-title').textContent = 'Edytuj szablon'; document.getElementById('edit-template-id').value = id; document.getElementById('template-name').value = tpl.name; document.getElementById('template-progress-kg').value = tpl.progressionKg ?? tpl.progressionPercent ?? 2.5; document.getElementById('template-progress-sessions').value = tpl.progressionSessions; renderTemplateExercisesTable(tpl.exercises); document.getElementById('template-form').style.display = 'block'; }
+        function renderTemplateExercisesTable(exercises) { const tbody = document.querySelector('#template-exercises-table tbody'); tbody.innerHTML = ''; exercises.forEach((ex, idx) => { const row = document.createElement('tr'); row._actualSets = ex.actualSets ? JSON.parse(JSON.stringify(ex.actualSets)) : null; row._startSets = ex.startSets ? JSON.parse(JSON.stringify(ex.startSets)) : (ex.actualSets ? JSON.parse(JSON.stringify(ex.actualSets)) : null); row.innerHTML = `<td>${buildExerciseSelectorHtml(ex.name)}</td><td><div class="number-control"><button class="btn-sm tpl-set-down">−</button><input type="number" value="${ex.sets}" min="1" class="tpl-ex-sets" style="width:60px"><button class="btn-sm tpl-set-up">+</button></div></td><td><input type="number" placeholder="+kg" class="tpl-ex-prog-kg" value="${ex.progressionKg ?? ex.progressionPercent ?? ''}" step="0.5" style="width:60px;"><input type="number" placeholder="co" class="tpl-ex-prog-sess" value="${ex.progressionSessions||''}" style="width:60px;"></td><td style="display:flex; gap:4px;"><button class="btn btn-sm edit-tpl-series-btn" data-idx="${idx}">✏️ Serie</button><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`; tbody.appendChild(row); const setInp = row.querySelector('.tpl-ex-sets'); row.querySelector('.tpl-set-up').addEventListener('click', ()=> setInp.value = +setInp.value + 1); row.querySelector('.tpl-set-down').addEventListener('click', ()=> setInp.value = Math.max(1, +setInp.value - 1)); row.querySelector('.edit-tpl-series-btn').addEventListener('click', ()=> editTemplateSeries(idx)); row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> { if (confirm('Usunąć ćwiczenie z szablonu?')) row.remove(); }); }); }
         function editTemplateSeries(idx) { const row = document.querySelectorAll('#template-exercises-table tbody tr')[idx]; const sel = row.querySelector('.tpl-ex-name-sel'); const name = sel.value === '__NEW__' ? row.querySelector('.tpl-ex-name-inp').value : sel.value; const setsCount = parseInt(row.querySelector('.tpl-ex-sets').value) || 3; let sets = row._actualSets; if (!sets) sets = Array(setsCount).fill(null).map(() => ({reps: 8, w: 20, rpe: 8})); if (sets.length > setsCount) sets = sets.slice(0, setsCount); else while (sets.length < setsCount) sets.push({...sets[sets.length-1] || {reps:8, w:20, rpe:8}}); let html = `<h4>${name || 'Ćwiczenie'} – edycja serii</h4>`; sets.forEach((s, i) => { html += `<div class="series-editor-row"><span style="font-weight:700; min-width:64px;">Seria ${i+1}</span><div style="display:flex; align-items:center; gap:5px;"><span style="color:var(--text-2); font-size:0.85rem;">Powt.:</span><div class="number-control"><button class="btn-sm tplser-rep-down" data-ser="${i}">−</button><input id="tpl-s-${i}-r" value="${s.reps}" style="width:60px"><button class="btn-sm tplser-rep-up" data-ser="${i}">+</button></div></div><div style="display:flex; align-items:center; gap:5px;"><span style="color:var(--text-2); font-size:0.85rem;">Ciężar:</span><div class="number-control"><button class="btn-sm tplser-w-down" data-ser="${i}">−</button><input id="tpl-s-${i}-w" value="${s.w}" style="width:80px" step="2.5"><button class="btn-sm tplser-w-up" data-ser="${i}">+</button></div> <span style="color:var(--text-3); font-size:0.85rem;">kg</span></div><div style="display:flex; align-items:center; gap:5px;"><span style="color:var(--text-2); font-size:0.85rem;">RPE:</span><div class="number-control"><button class="btn-sm tplser-rpe-down" data-ser="${i}">−</button><input id="tpl-s-${i}-rpe" value="${s.rpe||8}" style="width:60px" step="0.5" min="1" max="10"><button class="btn-sm tplser-rpe-up" data-ser="${i}">+</button></div></div></div>`; }); html += `<div style="margin-top:16px; text-align:right;"><button class="btn btn-primary" id="save-tpl-series">💾 Zapisz</button></div>`; const overlay = document.createElement('div'); overlay.className = 'modal-overlay'; const modal = document.createElement('div'); modal.className = 'modal-box'; modal.innerHTML = html; overlay.appendChild(modal); document.body.appendChild(overlay); overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); }); modal.querySelectorAll('.tplser-rep-up, .tplser-rep-down').forEach(b => b.addEventListener('click', (e) => { const inp = modal.querySelector(`#tpl-s-${b.dataset.ser}-r`); inp.value = b.classList.contains('tplser-rep-up') ? +inp.value + 1 : Math.max(1, +inp.value - 1); })); modal.querySelectorAll('.tplser-w-up, .tplser-w-down').forEach(b => b.addEventListener('click', (e) => { const inp = modal.querySelector(`#tpl-s-${b.dataset.ser}-w`); let v = parseFloat(inp.value) || 0; v = b.classList.contains('tplser-w-up') ? v + 2.5 : Math.max(0, v - 2.5); inp.value = Math.round(v * 2) / 2; })); modal.querySelectorAll('.tplser-rpe-up, .tplser-rpe-down').forEach(b => b.addEventListener('click', (e) => { const inp = modal.querySelector(`#tpl-s-${b.dataset.ser}-rpe`); let v = parseFloat(inp.value) || 8; v = b.classList.contains('tplser-rpe-up') ? Math.min(10, v + 0.5) : Math.max(1, v - 0.5); inp.value = Math.round(v * 2) / 2; })); document.getElementById('save-tpl-series').onclick = () => { const newSets = []; for (let i=0; i<sets.length; i++) newSets.push({ reps: +modal.querySelector(`#tpl-s-${i}-r`).value, w: +modal.querySelector(`#tpl-s-${i}-w`).value, rpe: parseFloat(modal.querySelector(`#tpl-s-${i}-rpe`).value) }); row._actualSets = newSets; if (!row._startSets) row._startSets = JSON.parse(JSON.stringify(newSets)); overlay.remove(); }; }
-        function getTemplateExercisesFromForm() { return Array.from(document.querySelectorAll('#template-exercises-table tbody tr')).map(row => { const sel = row.querySelector('.tpl-ex-name-sel'); const inp = row.querySelector('.tpl-ex-name-inp'); const exName = sel.value === '__NEW__' ? inp.value.trim() : sel.value; const sets = +row.querySelector('.tpl-ex-sets').value; const actualSets = row._actualSets || Array(sets).fill(null).map(()=>({reps:8, w:20, rpe:8})); const startSets = row._startSets || JSON.parse(JSON.stringify(actualSets)); const startWeight = startSets.reduce((sum,s)=>sum+s.w,0) / startSets.length; return { name: exName, sets, startWeight: Math.round(startWeight/2.5)*2.5, progressionPercent: row.querySelector('.tpl-ex-prog-perc').value ? parseFloat(row.querySelector('.tpl-ex-prog-perc').value) : null, progressionSessions: row.querySelector('.tpl-ex-prog-sess').value ? parseInt(row.querySelector('.tpl-ex-prog-sess').value) : null, actualSets, startSets }; }).filter(e => e.name); }
+        function getTemplateExercisesFromForm() { return Array.from(document.querySelectorAll('#template-exercises-table tbody tr')).map(row => { const sel = row.querySelector('.tpl-ex-name-sel'); const inp = row.querySelector('.tpl-ex-name-inp'); const exName = sel.value === '__NEW__' ? inp.value.trim() : sel.value; const sets = +row.querySelector('.tpl-ex-sets').value; const actualSets = row._actualSets || Array(sets).fill(null).map(()=>({reps:8, w:20, rpe:8})); const startSets = row._startSets || JSON.parse(JSON.stringify(actualSets)); const startWeight = startSets.reduce((sum,s)=>sum+s.w,0) / startSets.length; return { name: exName, sets, startWeight, progressionKg: row.querySelector('.tpl-ex-prog-kg').value ? parseFloat(row.querySelector('.tpl-ex-prog-kg').value) : null, progressionSessions: row.querySelector('.tpl-ex-prog-sess').value ? parseInt(row.querySelector('.tpl-ex-prog-sess').value) : null, actualSets, startSets }; }).filter(e => e.name); }
         function getAllKnownExercises() { const s = new Set([...allPresetExercises, ...Object.keys(exerciseHistory), ...Array.from(favoriteExercises)]); templates.forEach(t=>t.exercises.forEach(e=>s.add(e.name))); return Array.from(s).sort(); }
 
         // ---------- IMPORT Z TEKSTU ----------
-        function parseExerciseLine(line) { const trimmed = line.trim(); if (!trimmed) return null; const setsRepsMatch = trimmed.match(/(\d+)\s*x\s*(\d+)/i); let sets = 3, reps = 8; let name = trimmed; if (setsRepsMatch) { sets = parseInt(setsRepsMatch[1], 10) || 3; reps = parseInt(setsRepsMatch[2], 10) || 8; name = trimmed.replace(setsRepsMatch[0], '').trim(); } const weightMatch = name.match(/@\s*(\d+(?:[.,]\d+)?)\s*(?:kg)?/i); let weight = 20; if (weightMatch) { weight = parseFloat(weightMatch[1].replace(',', '.')) || 20; name = name.replace(weightMatch[0], '').trim(); } name = name.replace(/\s+/g, ' ').trim(); if (!name) return null; return { name, sets, reps, startWeight: Math.round(weight / 2.5) * 2.5 }; }
-        function importTemplateFromText(text, templateName) { const lines = text.split('\n').filter(l => l.trim()); const exercises = []; for (const line of lines) { const parsed = parseExerciseLine(line); if (parsed) { exercises.push({ name: parsed.name, sets: parsed.sets, startWeight: parsed.startWeight, actualSets: Array(parsed.sets).fill(null).map(() => ({ reps: parsed.reps, w: parsed.startWeight, rpe: 8 })) }); } } if (exercises.length === 0) { alert('Nie znaleziono żadnych poprawnych ćwiczeń.'); return; } const name = templateName || `Import ${new Date().toLocaleDateString('pl')}`; const newTemplate = { id: 'tpl_' + Date.now(), name: name, progressionPercent: 5, progressionSessions: 3, exercises: exercises }; templates.push(newTemplate); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); alert(`✅ Utworzono szablon "${name}" z ${exercises.length} ćwiczeniami.`); }
+        function parseExerciseLine(line) { const trimmed = line.trim(); if (!trimmed) return null; const setsRepsMatch = trimmed.match(/(\d+)\s*x\s*(\d+)/i); let sets = 3, reps = 8; let name = trimmed; if (setsRepsMatch) { sets = parseInt(setsRepsMatch[1], 10) || 3; reps = parseInt(setsRepsMatch[2], 10) || 8; name = trimmed.replace(setsRepsMatch[0], '').trim(); } const weightMatch = name.match(/@\s*(\d+(?:[.,]\d+)?)\s*(?:kg)?/i); let weight = 20; if (weightMatch) { weight = parseFloat(weightMatch[1].replace(',', '.')) || 20; name = name.replace(weightMatch[0], '').trim(); } name = name.replace(/\s+/g, ' ').trim(); if (!name) return null; return { name, sets, reps, startWeight: weight }; }
+        function importTemplateFromText(text, templateName) { const lines = text.split('\n').filter(l => l.trim()); const exercises = []; for (const line of lines) { const parsed = parseExerciseLine(line); if (parsed) { exercises.push({ name: parsed.name, sets: parsed.sets, startWeight: parsed.startWeight, actualSets: Array(parsed.sets).fill(null).map(() => ({ reps: parsed.reps, w: parsed.startWeight, rpe: 8 })) }); } } if (exercises.length === 0) { alert('Nie znaleziono żadnych poprawnych ćwiczeń.'); return; } const name = templateName || `Import ${new Date().toLocaleDateString('pl')}`; const newTemplate = { id: 'tpl_' + Date.now(), name, progressionKg: 2.5, progressionSessions: 3, exercises }; templates.push(newTemplate); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); alert(`✅ Utworzono szablon "${name}" z ${exercises.length} ćwiczeniami.`); }
 
         // ---------- REKORDY ----------
         function renderRecordsPanel() { const cont = document.getElementById('records-container'); const exs = new Set(); templates.forEach(t=>t.exercises.forEach(e=>exs.add(e.name))); Object.keys(exerciseHistory).forEach(e=>exs.add(e)); const arr = Array.from(exs).sort(); cont.innerHTML = arr.map(ex=>`<div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface-2); border:1px solid var(--border); border-radius:10px;"><span style="flex:1;">${ex}</span><input class="record-input" data-exercise="${ex}" type="number" value="${personalRecords[ex]||''}" placeholder="kg" step="2.5" style="width:88px;"> <span style="color:var(--text-3);">kg</span></div>`).join('') || '<p>Brak ćwiczeń.</p>'; }
@@ -1203,19 +1284,36 @@
             document.getElementById('stop-timer-btn').addEventListener('click', ()=>{ if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } document.getElementById('timer-display').textContent = document.getElementById('timer-duration').value + ' s'; });
             document.getElementById('deload-checkbox').addEventListener('change', function() { const w = workouts[formatDate(selectedDate)]; if (w) { w.deload = this.checked; document.getElementById('deload-settings-panel').style.display = this.checked ? 'block' : 'none'; renderWorkoutPanel(); saveData(); } });
             ['weight','sets','reps'].forEach(type => { const slider = document.getElementById(`deload-${type}-slider`); const display = document.getElementById(`deload-${type}-percent-display`); slider.addEventListener('input', function() { display.textContent = `-${this.value}%`; if (document.getElementById('deload-checkbox').checked) renderWorkoutPanel(); }); });
-            document.getElementById('complete-workout-btn').addEventListener('click', ()=>{ const ds = formatDate(selectedDate); const w = workouts[ds]; if(!w) return; w.deload = document.getElementById('deload-checkbox').checked; w.status = 'completed'; w.notes = document.getElementById('workout-notes').value; if(w.type!=='strength') { w.duration = +document.getElementById('cardio-duration').value*60; w.avgHr = +document.getElementById('cardio-hr').value; } if(w.templateId && w.type==='strength' && !w.deload) { templateUsageCount[w.templateId] = (templateUsageCount[w.templateId]||0)+1; updateTemplateFromWorkout(w.templateId, w.exercises); } updateHistory(new Date(ds)); saveData(); renderCalendar(); renderWorkoutPanel(); });
+            document.getElementById('complete-workout-btn').addEventListener('click', ()=>{ const ds = formatDate(selectedDate); const w = workouts[ds]; if(!w) return;
+                // Zapisz wartości ze wszystkich otwartych ćwiczeń przed ukończeniem
+                if(w.type==='strength') (w.exercises||[]).forEach((_,idx)=>{ if(!w.exercises[idx].collapsed) saveInlineValues(idx,w); });
+                w.deload = document.getElementById('deload-checkbox').checked; w.status = 'completed'; w.notes = document.getElementById('workout-notes').value; if(w.type!=='strength') { w.duration = +document.getElementById('cardio-duration').value*60; w.avgHr = +document.getElementById('cardio-hr').value; } if(w.templateId && w.type==='strength' && !w.deload) { updateTemplateFromWorkout(w.templateId, w.exercises); // templateUsageCount jest resetowane do 0 przez updateTemplateFromWorkout, więc nie inkrementujemy tutaj
+                const toast=document.createElement('div'); toast.textContent='✅ Szablon zaktualizowany!'; toast.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:10px 22px;border-radius:var(--r-pill);font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.2);'; document.body.appendChild(toast); setTimeout(()=>toast.remove(),2500); } updateHistory(new Date(ds)); saveData(); renderCalendar(); renderWorkoutPanel(); });
             document.getElementById('skip-workout-btn').addEventListener('click', ()=>{ const w = workouts[formatDate(selectedDate)]; if(!w) return; w.status = 'skipped'; saveData(); renderCalendar(); renderWorkoutPanel(); });
             document.getElementById('uncomplete-workout-btn').addEventListener('click', ()=>{ resetWorkoutToPlanned(selectedDate); renderWorkoutPanel(); });
-            document.getElementById('delete-workout-btn').addEventListener('click', ()=>{ if (!confirm('Czy na pewno usunąć cały trening z tego dnia?')) return; deleteWorkout(selectedDate); });
-            document.getElementById('add-exercise-btn').addEventListener('click', ()=>{ populateExerciseSelect(); document.getElementById('exercise-select').style.display='block'; document.getElementById('new-exercise-name').style.display='none'; document.getElementById('add-exercise-form').style.display='block'; });
             function populateExerciseSelect() { const sel = document.getElementById('exercise-select'); sel.innerHTML = getAllKnownExercises().map(e=>`<option value="${e}">${e}</option>`).join(''); }
+            document.getElementById('delete-workout-btn').addEventListener('click', ()=>{
+                const ds = formatDate(selectedDate);
+                if (!workouts[ds]) return alert('Brak treningu do usunięcia');
+                if (!confirm('Czy na pewno usunąć cały trening z tego dnia?')) return;
+                deleteWorkout(selectedDate);
+            });
+            document.getElementById('add-exercise-btn').addEventListener('click', ()=>{
+                const ds = formatDate(selectedDate);
+                if (!workouts[ds]) { workouts[ds] = { type:'strength', exercises:[], deload:false, status:'planned', notes:'' }; saveData(); renderWorkoutPanel(); return; }
+                if (workouts[ds].type !== 'strength') return;
+                populateExerciseSelect();
+                document.getElementById('exercise-select').style.display='block';
+                document.getElementById('new-exercise-name').style.display='none';
+                document.getElementById('add-exercise-form').style.display='block';
+            });
             document.getElementById('toggle-new-exercise').addEventListener('click', ()=>{ const sel = document.getElementById('exercise-select'); const inp = document.getElementById('new-exercise-name'); if (sel.style.display !== 'none') { sel.style.display = 'none'; inp.style.display = 'block'; inp.focus(); } else { sel.style.display = 'block'; inp.style.display = 'none'; } });
             document.getElementById('add-selected-exercise').addEventListener('click', ()=>{ const sel = document.getElementById('exercise-select'); const inp = document.getElementById('new-exercise-name'); let name = sel.style.display !== 'none' ? sel.value : inp.value.trim(); if (!name) return alert('Wybierz lub wpisz ćwiczenie'); addExercise(name); document.getElementById('add-exercise-form').style.display='none'; });
             document.getElementById('render-month-days').addEventListener('click', renderHarmonogramDays);
             document.getElementById('plan-month').addEventListener('change', renderHarmonogramDays);
             document.getElementById('create-template-btn').addEventListener('click', ()=>{ document.getElementById('edit-template-id').value = ''; document.getElementById('template-name').value = ''; renderTemplateExercisesTable([]); document.getElementById('template-form').style.display = 'block'; });
-            document.getElementById('add-exercise-to-template').addEventListener('click', ()=>{ const tbody = document.querySelector('#template-exercises-table tbody'); const row = document.createElement('tr'); row._actualSets = null; row.innerHTML = `<td>${buildExerciseSelectorHtml('')}</td><td><div class="number-control"><button class="btn-sm tpl-set-down">−</button><input type="number" class="tpl-ex-sets" value="3" style="width:60px"><button class="btn-sm tpl-set-up">+</button></div></td><td><input type="number" placeholder="+%" class="tpl-ex-prog-perc" style="width:60px;"><input type="number" placeholder="co" class="tpl-ex-prog-sess" style="width:60px;"></td><td style="display:flex; gap:4px;"><button class="btn btn-sm edit-tpl-series-btn" data-idx="${tbody.children.length}">✏️ Serie</button><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`; tbody.appendChild(row); const idx = tbody.children.length - 1; const setInp = row.querySelector('.tpl-ex-sets'); row.querySelector('.tpl-set-up').addEventListener('click', ()=> setInp.value = +setInp.value + 1); row.querySelector('.tpl-set-down').addEventListener('click', ()=> setInp.value = Math.max(1, +setInp.value - 1)); row.querySelector('.edit-tpl-series-btn').addEventListener('click', ()=> editTemplateSeries(idx)); row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> { if (confirm('Usunąć ćwiczenie?')) row.remove(); }); });
-            document.getElementById('save-template-btn').addEventListener('click', ()=>{ const id = document.getElementById('edit-template-id').value || 'tpl_'+Date.now(); const name = document.getElementById('template-name').value; const perc = +document.getElementById('template-progress-percent').value; const sess = +document.getElementById('template-progress-sessions').value; const formExs = getTemplateExercisesFromForm(); if(!name || !formExs.length) return alert('Uzupełnij dane'); const tpl = { id, name, progressionPercent: perc, progressionSessions: sess, exercises: formExs }; const idx = templates.findIndex(t=>t.id===id); if(idx>=0) templates[idx]=tpl; else templates.push(tpl); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); document.getElementById('template-form').style.display='none'; });
+            document.getElementById('add-exercise-to-template').addEventListener('click', ()=>{ const tbody = document.querySelector('#template-exercises-table tbody'); const row = document.createElement('tr'); row._actualSets = null; row._startSets = null; row.innerHTML = `<td>${buildExerciseSelectorHtml('')}</td><td><div class="number-control"><button class="btn-sm tpl-set-down">−</button><input type="number" class="tpl-ex-sets" value="3" style="width:60px"><button class="btn-sm tpl-set-up">+</button></div></td><td><input type="number" placeholder="+kg" class="tpl-ex-prog-kg" step="0.5" style="width:60px;"><input type="number" placeholder="co" class="tpl-ex-prog-sess" style="width:60px;"></td><td style="display:flex; gap:4px;"><button class="btn btn-sm edit-tpl-series-btn" data-idx="${tbody.children.length}">✏️ Serie</button><button class="btn btn-sm remove-tpl-ex">🗑️</button></td>`; tbody.appendChild(row); const idx = tbody.children.length - 1; const setInp = row.querySelector('.tpl-ex-sets'); row.querySelector('.tpl-set-up').addEventListener('click', ()=> setInp.value = +setInp.value + 1); row.querySelector('.tpl-set-down').addEventListener('click', ()=> setInp.value = Math.max(1, +setInp.value - 1)); row.querySelector('.edit-tpl-series-btn').addEventListener('click', ()=> editTemplateSeries(idx)); row.querySelector('.remove-tpl-ex').addEventListener('click', ()=> { if (confirm('Usunąć ćwiczenie?')) row.remove(); }); });
+            document.getElementById('save-template-btn').addEventListener('click', ()=>{ const id = document.getElementById('edit-template-id').value || 'tpl_'+Date.now(); const name = document.getElementById('template-name').value; const kg = +document.getElementById('template-progress-kg').value; const sess = +document.getElementById('template-progress-sessions').value; const formExs = getTemplateExercisesFromForm(); if(!name || !formExs.length) return alert('Uzupełnij dane'); const tpl = { id, name, progressionKg: kg, progressionSessions: sess, exercises: formExs }; const idx = templates.findIndex(t=>t.id===id); if(idx>=0) templates[idx]=tpl; else templates.push(tpl); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); document.getElementById('template-form').style.display='none'; });
             document.getElementById('cancel-template-btn').addEventListener('click', ()=> document.getElementById('template-form').style.display='none');
             document.getElementById('save-records-btn').addEventListener('click', ()=>{ document.querySelectorAll('.record-input').forEach(inp => { const ex = inp.dataset.exercise; const v = parseFloat(inp.value); if(!isNaN(v) && v>0) personalRecords[ex] = v; else delete personalRecords[ex]; }); saveData(); alert('✅ Rekordy zapisane'); });
             document.getElementById('progress-exercise-select').addEventListener('change', e=>renderProgressChart(e.target.value));
