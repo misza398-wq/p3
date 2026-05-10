@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>💪 Cykl PRO – heatmapa miesięczna w blokach</title>
+    <title>💪 Cykl PRO – Trening & Życie</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -440,7 +440,6 @@
         const predefinedThemes = [
             { id: 'dark', name: '🌙 Ciemny', colors: { bg:'#0D0E1A', surface:'#1a1b2e', accent:'#6C63FF', text:'#F0F0FF', strength:'#7C6FFF', run:'#00E5A0', home:'#FFB830', planned:'#6C63FF', completed:'#00E5A0', skipped:'#FF4D6D' }},
             { id: 'light', name: '☀️ Jasny', colors: { bg:'#EDEEF8', surface:'#ffffff', accent:'#5B5FF0', text:'#0F1023', strength:'#8B5CF6', run:'#22C55E', home:'#EAB308', planned:'#60A5FA', completed:'#10B981', skipped:'#EF4444' }},
-            { id: 'dark', name: '🌙 Ciemny', colors: { bg:'#07090F', surface:'#0E1220', accent:'#5B5FF0', text:'#EDF0FF', strength:'#8B5CF6', run:'#22C55E', home:'#EAB308', planned:'#60A5FA', completed:'#10B981', skipped:'#239444' }},
             { id: 'pink', name: '🌸 Różowy', colors: { bg:'#FBF0F6', surface:'#FFF8FC', accent:'#C2185B', text:'#280916', strength:'#C2185B', run:'#22C55E', home:'#EAB308', planned:'#60A5FA', completed:'#10B981', skipped:'#EF4444' }}
         ];
         let favoriteExercises = new Set(JSON.parse(localStorage.getItem('favExercises') || '[]'));
@@ -460,7 +459,6 @@
 
         // ---------- POMOCNICZE ----------
         function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-        function getWeekNumber(d) { const date = new Date(d); date.setHours(0,0,0,0); date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7); const week1 = new Date(date.getFullYear(), 0, 4); return 1 + Math.round(((date - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7); }
         function getMonday(date) { const d = new Date(date); const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1); return new Date(d.setDate(diff)); }
         function getWeekDates(offset = 0) { const today = new Date(); const monday = getMonday(today); monday.setDate(monday.getDate() + offset * 7); const week = []; for (let i = 0; i < 7; i++) { const d = new Date(monday); d.setDate(monday.getDate() + i); week.push(d); } return week; }
         function updateBMI() { document.getElementById('bmi-display').textContent = (userWeight / ((userHeight/100)**2)).toFixed(1); }
@@ -570,7 +568,7 @@
             const grid = document.getElementById('days-container'); grid.innerHTML = '';
             const todayStr = formatDate(new Date()), selectedStr = formatDate(selectedDate);
             for(let i=0; i<42; i++) { const cellDate = new Date(startDate); cellDate.setDate(startDate.getDate() + i); const dateStr = formatDate(cellDate); const w = workouts[dateStr]; const wType = w?.type; const status = w ? w.status : null; const cell = document.createElement('div'); cell.className = 'day-cell'; if (wType && wType !== 'rest') cell.classList.add(`type-${wType}`); if (status) cell.classList.add(`status-${status}`); if(dateStr === todayStr) cell.classList.add('today'); if(dateStr === selectedStr) cell.classList.add('selected'); if(cellDate.getMonth() !== month) cell.style.opacity = '0.4'; cell.textContent = cellDate.getDate(); // Dot only for actual workouts with real status (not planned rest) 
-if (status && wType && wType !== 'rest') { const d=document.createElement('span'); d.className='status-dot'; cell.appendChild(d); } else if (status === 'completed' || status === 'skipped') { const d=document.createElement('span'); d.className='status-dot'; cell.appendChild(d); } cell.addEventListener('click', ()=>{ selectedDate = new Date(cellDate); renderCalendar(); document.querySelector('[data-tab="workout"]').click(); renderWorkoutPanel(); }); grid.appendChild(cell); }
+if (status && wType && wType !== 'rest') { const d=document.createElement('span'); d.className='status-dot'; cell.appendChild(d); } cell.addEventListener('click', ()=>{ selectedDate = new Date(cellDate); renderCalendar(); document.querySelector('[data-tab="workout"]').click(); renderWorkoutPanel(); }); grid.appendChild(cell); }
         }
 
         // ---------- GENEROWANIE TRENINGU ----------
@@ -651,7 +649,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                     refreshed.plannedVolume = w.plannedVolume;
                     refreshed.exercises.forEach(newEx => {
                         const old = (w.exercises||[]).find(e=>e.name===newEx.name);
-                        if (old) { newEx.collapsed=old.collapsed; newEx.done=old.done; newEx.seriesCollapsed=old.seriesCollapsed; if(old.manuallyEdited){newEx.actualSets=old.actualSets; newEx.manuallyEdited=true;} }
+                        if (old) { newEx.collapsed=old.collapsed; newEx.done=old.done; newEx.seriesCollapsed=old.seriesCollapsed; if(old.manuallyEdited){newEx.actualSets=old.actualSets; newEx.sets=old.sets; newEx.manuallyEdited=true;} }
                     });
                     workouts[ds]=refreshed; w=refreshed; saveData();
                 }
@@ -684,7 +682,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             } else if(w.type==='run'||w.type==='home') {
                 document.getElementById('cardio-duration').value = w.duration? Math.round(w.duration/60) : 30;
                 document.getElementById('cardio-hr').value = w.avgHr||140;
-                document.getElementById('load-score-display').textContent = `📊 Obciążenie: ${Math.round((w.duration/60)*(w.avgHr-restingHR))} pkt`;
+                document.getElementById('load-score-display').textContent = `📊 Obciążenie: ${w.duration ? Math.round((w.duration/60)*(w.avgHr-restingHR)) : 0} pkt`;
                 document.getElementById('total-volume').textContent = '0';
                 document.getElementById('volume-diff').innerHTML = '';
             }
@@ -836,7 +834,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                         </div>
                     </td>`;
                 }
-                tbody.appendChild(row); bindExerciseSelector(row);
+                tbody.appendChild(row);
             });
 
             // Zwijanie/rozwijanie
@@ -861,7 +859,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             document.querySelectorAll('.sets-count').forEach(i=>i.addEventListener('change',function(){
                 const idx=+this.dataset.idx;
                 saveInlineValues(idx,w);
-                const ex=w.exercises[idx]; const n=+this.value; ex.sets=n;
+                const ex=w.exercises[idx]; const n=+this.value; ex.sets=n; ex.manuallyEdited=true;
                 if (!ex.actualSets) ex.actualSets=[];
                 if (ex.actualSets.length>n) ex.actualSets=ex.actualSets.slice(0,n);
                 else { while(ex.actualSets.length<n){const last=ex.actualSets.length>0?ex.actualSets[ex.actualSets.length-1]:{reps:8,w:ex.plannedWeight||20,rpe:8}; ex.actualSets.push({...last});} }
@@ -1000,78 +998,6 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                 updateVolumeDiffDisplay(calculateVolumeFromExercises(w.exercises));
                 renderWorkoutPanel(); saveData();
             }));
-        }
-
-                function openSetEditor(idx) {
-            const w = workouts[formatDate(selectedDate)];
-            const ex = w.exercises[idx];
-            const deloadActive = w.deload || false;
-            const deloadWeight = parseFloat(document.getElementById('deload-weight-slider')?.value || 10) / 100;
-            const deloadReps = parseFloat(document.getElementById('deload-reps-slider')?.value || 0) / 100;
-            const originalSets = ex.actualSets || Array(ex.sets).fill({reps:8, w:ex.plannedWeight||20, rpe:8});
-            const roundWeight = (val) => Math.round(val * 2) / 2;
-            let html = `<h4>${ex.name} ${deloadActive ? '<span style="font-size:0.8rem; color:var(--text-2);">(Deload aktywny)</span>' : ''}</h4>`;
-            originalSets.forEach((s, i) => {
-                let displayReps = s.reps;
-                let displayWeight = s.w;
-                if (deloadActive) { displayReps = Math.max(1, Math.round(s.reps * (1 - deloadReps))); displayWeight = roundWeight(s.w * (1 - deloadWeight)); }
-                html += `<div class="series-editor-row"><span style="font-weight:700; min-width:64px;">Seria ${i+1}</span>
-                    <div style="display:flex; align-items:center; gap:5px;"><span style="color:var(--text-2); font-size:0.85rem;">Powt.:</span><div class="number-control"><button class="btn-sm ser-rep-down" data-ser="${i}">−</button><input id="s-${i}-r" value="${displayReps}" style="width:60px"><button class="btn-sm ser-rep-up" data-ser="${i}">+</button></div></div>
-                    <div style="display:flex; align-items:center; gap:5px;"><span style="color:var(--text-2); font-size:0.85rem;">Ciężar:</span><div class="number-control"><button class="btn-sm ser-w-down" data-ser="${i}">−</button><input id="s-${i}-w" value="${displayWeight}" style="width:80px" step="2.5"><button class="btn-sm ser-w-up" data-ser="${i}">+</button></div> <span style="color:var(--text-3); font-size:0.85rem;">kg</span></div>
-                    <div style="display:flex; align-items:center; gap:5px;"><span style="color:var(--text-2); font-size:0.85rem;">RPE:</span><div class="number-control"><button class="btn-sm ser-rpe-down" data-ser="${i}">−</button><input id="s-${i}-rpe" value="${s.rpe||8}" style="width:60px" step="0.5" min="1" max="10"><button class="btn-sm ser-rpe-up" data-ser="${i}">+</button></div></div>
-                </div>`;
-            });
-            html += `<div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
-                <button class="btn" id="cancel-sets">🚪 Zostaw</button>
-                <button class="btn btn-primary" id="save-sets">💾 Zapisz</button>
-                <button class="btn btn-success" id="done-sets" style="background:var(--success); color:#fff; border-color:var(--success);">✅ Wykonane</button>
-            </div>`;
-            const overlay = document.createElement('div'); overlay.className = 'modal-overlay';
-            const modal = document.createElement('div'); modal.className = 'modal-box'; modal.innerHTML = html;
-            overlay.appendChild(modal); document.body.appendChild(overlay);
-            overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
-            
-            modal.querySelectorAll('.ser-rep-up, .ser-rep-down').forEach(b => b.addEventListener('click', (e) => {
-                const inp = modal.querySelector(`#s-${b.dataset.ser}-r`);
-                inp.value = b.classList.contains('ser-rep-up') ? +inp.value + 1 : Math.max(1, +inp.value - 1);
-            }));
-            modal.querySelectorAll('.ser-w-up, .ser-w-down').forEach(b => b.addEventListener('click', (e) => {
-                const inp = modal.querySelector(`#s-${b.dataset.ser}-w`);
-                let v = parseFloat(inp.value) || 0;
-                v = b.classList.contains('ser-w-up') ? v + 2.5 : Math.max(0, v - 2.5);
-                inp.value = roundWeight(v);
-            }));
-            modal.querySelectorAll('.ser-rpe-up, .ser-rpe-down').forEach(b => b.addEventListener('click', (e) => {
-                const inp = modal.querySelector(`#s-${b.dataset.ser}-rpe`);
-                let v = parseFloat(inp.value) || 8;
-                v = b.classList.contains('ser-rpe-up') ? Math.min(10, v + 0.5) : Math.max(1, v - 0.5);
-                inp.value = Math.round(v * 2) / 2;
-            }));
-            
-            const closeModal = () => overlay.remove();
-            const saveChanges = (collapseAfter = false) => {
-                const newSets = [];
-                for (let i = 0; i < originalSets.length; i++) {
-                    let reps = +modal.querySelector(`#s-${i}-r`).value;
-                    let weight = +modal.querySelector(`#s-${i}-w`).value;
-                    const rpe = parseFloat(modal.querySelector(`#s-${i}-rpe`).value);
-                    if (deloadActive) { reps = Math.round(reps / (1 - deloadReps)); weight = roundWeight(weight / (1 - deloadWeight)); }
-                    newSets.push({ reps, w: weight, rpe });
-                }
-                ex.actualSets = newSets;
-                ex.plannedWeight = roundWeight(newSets.reduce((sum, s) => sum + s.w, 0) / newSets.length);
-                if (collapseAfter) ex.collapsed = true;
-                overlay.remove();
-                const currentVol = calculateVolumeFromExercises(w.exercises);
-                document.getElementById('total-volume').textContent = currentVol;
-                updateVolumeDiffDisplay(currentVol);
-                renderWorkoutPanel();
-                saveData();
-            };
-            
-            document.getElementById('cancel-sets').onclick = closeModal;
-            document.getElementById('save-sets').onclick = () => saveChanges(false);
-            document.getElementById('done-sets').onclick = () => saveChanges(true);
         }
         function addExercise(name) {
             const d = formatDate(selectedDate);
@@ -1395,7 +1321,14 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             container.querySelectorAll('.tpl-collapse-icon').forEach(icon => icon.addEventListener('click', () => {
                 saveTplAllFromDOM();
                 const idx = +icon.dataset.idx;
-                tplFormExercises[idx].collapsed = (tplFormExercises[idx].collapsed !== false);
+                const ex = tplFormExercises[idx];
+                const wasCollapsed = ex.collapsed !== false;
+                ex.collapsed = !wasCollapsed;
+                // Przy rozwijaniu – od razu otwórz wszystkie serie
+                if (wasCollapsed) {
+                    const cnt = ex.actualSets ? ex.actualSets.length : (ex.sets || 3);
+                    ex.seriesCollapsed = Array(cnt).fill(false);
+                }
                 renderTplFormExercises();
             }));
             container.querySelectorAll('.tpl-set-up,.tpl-set-down').forEach(b => b.addEventListener('click', () => {
@@ -1494,7 +1427,8 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                 if (ex.startSets && ex.startSets.length) startSets = JSON.parse(JSON.stringify(ex.startSets));
                 else if (ex.startWeight) startSets = Array(sets).fill(null).map((_,si)=>({reps:actualSets[si]?.reps||8,w:ex.startWeight,rpe:actualSets[si]?.rpe||8}));
                 else startSets = null;
-                return { name: ex.name||'', sets, actualSets, startSets, progressionKg: ex.progressionKg ?? ex.progressionPercent ?? null, progressionSessions: ex.progressionSessions||null, collapsed: true, seriesCollapsed: null };
+                const sc = Array(sets).fill(false);
+                return { name: ex.name||'', sets, actualSets, startSets, progressionKg: ex.progressionKg ?? ex.progressionPercent ?? null, progressionSessions: ex.progressionSessions||null, collapsed: false, seriesCollapsed: sc };
             });
             renderTplFormExercises();
         }
@@ -1603,6 +1537,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             });
         }
         function renderProgressChart(exName) { const hist = exerciseHistory[exName]||[]; if(progressChart) progressChart.destroy(); progressChart = new Chart(document.getElementById('progress-chart'), { type:'line', data:{ labels: hist.map(h=>h.date), datasets:[ { label:'E1RM', data: hist.map(h=>h.e1rm), borderColor:'#f97316', yAxisID:'y' }, { label:'Objętość', data: hist.map(h=>h.volume), borderColor:'#5B5FF0', yAxisID:'y1' } ] }, options:{ responsive:true, maintainAspectRatio: false, scales:{ y:{}, y1:{ position:'right' } } } }); }
+        function getWeekNumber(d) { const date = new Date(d); date.setHours(0,0,0,0); date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7); const week1 = new Date(date.getFullYear(), 0, 4); return 1 + Math.round(((date - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7); }
         function renderWeeklyVolumeChart() { const vols = {}; Object.entries(workouts).forEach(([d,w])=>{ if(w.status!=='completed') return; const week = getWeekNumber(new Date(d)); const key = `${new Date(d).getFullYear()}-W${week}`; let load = 0; if(w.type==='strength') w.exercises?.forEach(e=>e.actualSets?.forEach(s=>load+=s.w*s.reps)); else if(w.type==='run'||w.type==='home') load = w.loadScore||0; vols[key] = (vols[key]||0)+load; }); const keys = Object.keys(vols).sort(); if(weeklyChart) weeklyChart.destroy(); weeklyChart = new Chart(document.getElementById('weekly-volume-chart'), { type:'line', data:{ labels:keys, datasets:[{ label:'Tonaż tygodniowy', data: keys.map(k=>vols[k]), borderColor: '#10B981' }] }, options:{ responsive:true, maintainAspectRatio: false } }); }
         function renderTemplateVolumeChart() { const templateVolumes = {}; Object.entries(workouts).forEach(([d,w])=>{ if(w.status!=='completed' || w.type!=='strength' || !w.templateId) return; const week = getWeekNumber(new Date(d)); const key = `${new Date(d).getFullYear()}-W${week}`; let load = 0; w.exercises?.forEach(e=>e.actualSets?.forEach(s=>load+=s.w*s.reps)); if(!templateVolumes[w.templateId]) templateVolumes[w.templateId] = {}; templateVolumes[w.templateId][key] = (templateVolumes[w.templateId][key]||0) + load; }); const allWeeks = new Set(); Object.values(templateVolumes).forEach(weekData => Object.keys(weekData).forEach(wk => allWeeks.add(wk))); const sortedWeeks = Array.from(allWeeks).sort(); const datasets = []; const colors = ['#8B5CF6','#22C55E','#EAB308','#EF4444','#5B5FF0','#F97316']; let colorIdx = 0; templates.forEach(tpl => { const vols = templateVolumes[tpl.id] || {}; const data = sortedWeeks.map(wk => vols[wk] || 0); if (data.some(v=>v>0)) { datasets.push({ label: tpl.name, data: data, borderColor: colors[colorIdx % colors.length] }); colorIdx++; } }); if(templateVolumeChart) templateVolumeChart.destroy(); templateVolumeChart = new Chart(document.getElementById('template-volume-chart'), { type: 'line', data: { labels: sortedWeeks, datasets }, options: { responsive: true, maintainAspectRatio: false } }); }
         function renderWeightChart() { const entries = Object.entries(weightHistory).sort((a,b)=>a[0].localeCompare(b[0])); if(weightChart) weightChart.destroy(); weightChart = new Chart(document.getElementById('weight-chart'), { type:'line', data:{ labels:entries.map(e=>e[0]), datasets:[{ label:'Waga (kg)', data:entries.map(e=>e[1]), borderColor:'#8B5CF6' }] }, options:{ responsive:true, maintainAspectRatio: false } }); }
@@ -1763,7 +1698,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             document.getElementById('create-template-btn').addEventListener('click', ()=>{ document.getElementById('edit-template-id').value = ''; document.getElementById('template-name').value = ''; renderTemplateExercisesTable([]); document.getElementById('template-form').style.display = 'block'; });
             document.getElementById('add-exercise-to-template').addEventListener('click', ()=>{
                 saveTplAllFromDOM();
-                tplFormExercises.push({ name:'', sets:3, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), startSets:null, progressionKg:null, progressionSessions:null, collapsed:false, seriesCollapsed:[true,true,true] });
+                tplFormExercises.push({ name:'', sets:3, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), startSets:null, progressionKg:null, progressionSessions:null, collapsed:false, seriesCollapsed:[false,false,false] });
                 renderTplFormExercises();
                 document.getElementById('tpl-exercises-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'nearest'});
             });
