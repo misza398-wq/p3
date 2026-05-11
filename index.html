@@ -846,7 +846,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                         w.exercises[idx].manuallyEdited=true;
                     }
                     w.exercises[idx].collapsed=!w.exercises[idx].collapsed;
-                    if (w.templateId) syncTemplateFromWorkout(w.templateId, w.exercises);
+                    if (w.templateId) syncTemplateFromWorkout(w.templateId, w.exercises, false);
                     renderWorkoutPanel(); saveData();
                 });
             });
@@ -896,7 +896,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                     if (!fresh.plannedVolume) fresh.plannedVolume = calculateVolumeFromExercises(fresh.exercises);
                     fresh.exercises.splice(idx,1);
                     fresh.exercisesModified = true;
-                    if (fresh.templateId) syncTemplateFromWorkout(fresh.templateId, fresh.exercises);
+                    if (fresh.templateId) syncTemplateFromWorkout(fresh.templateId, fresh.exercises, false);
                     if(exName&&exerciseHistory[exName]){exerciseHistory[exName]=exerciseHistory[exName].filter(e=>e.date!==ds); if(!exerciseHistory[exName].length) delete exerciseHistory[exName];}
                     renderWorkoutPanel(); saveData();
                 };
@@ -993,7 +993,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                 const idx=+b.dataset.idx;
                 saveInlineValues(idx,w);
                 w.exercises[idx].done=true; w.exercises[idx].collapsed=true; w.exercises[idx].manuallyEdited=true;
-                if (w.templateId) syncTemplateFromWorkout(w.templateId, w.exercises);
+                if (w.templateId) syncTemplateFromWorkout(w.templateId, w.exercises, false);
                 document.getElementById('total-volume').textContent=calculateVolumeFromExercises(w.exercises);
                 updateVolumeDiffDisplay(calculateVolumeFromExercises(w.exercises));
                 renderWorkoutPanel(); saveData();
@@ -1006,12 +1006,15 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             if (!workouts[d].plannedVolume) workouts[d].plannedVolume = calculateVolumeFromExercises(workouts[d].exercises);
             workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedWeight:20, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), templateExercise: false, collapsed: false });
             workouts[d].exercisesModified = true;
-            if (workouts[d].templateId) syncTemplateFromWorkout(workouts[d].templateId, workouts[d].exercises);
+            if (workouts[d].templateId) syncTemplateFromWorkout(workouts[d].templateId, workouts[d].exercises, false);
             renderWorkoutPanel(); saveData();
         }
 
         // ---------- AKTUALIZACJA SZABLONU ----------
-        function syncTemplateFromWorkout(templateId, workoutExercises) {
+        // doCalibrate=true TYLKO przy finalizacji treningu (updateTemplateFromWorkout).
+        // Śródsesyjne wywołania (zwijanie, "wykonane") używają doCalibrate=false,
+        // żeby wielokrotny sync nie zepsuł startSets przed zakończeniem treningu.
+        function syncTemplateFromWorkout(templateId, workoutExercises, doCalibrate) {
             const tpl = templates.find(t => t.id === templateId);
             if (!tpl) return;
 
@@ -1035,36 +1038,39 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                     }
                     tplEx.sets = wEx.sets;
 
-                    const _kg   = tplEx.progressionKg   ?? tpl.progressionKg   ?? 2.5;
-                    const _sess = tplEx.progressionSessions ?? tpl.progressionSessions ?? 3;
-                    const _count = templateUsageCount[tpl.id] || 0; // przed inkrementacją
-                    const _steps = Math.floor(_count / _sess);
+                    // Recalibracja startSets TYLKO przy finalizacji treningu
+                    if (doCalibrate) {
+                        const _kg   = tplEx.progressionKg   ?? tpl.progressionKg   ?? 2.5;
+                        const _sess = tplEx.progressionSessions ?? tpl.progressionSessions ?? 3;
+                        const _count = templateUsageCount[tpl.id] || 0; // przed inkrementacją
+                        const _steps = Math.floor(_count / _sess);
 
-                    // Migracja: brak startSets → wylicz wstecznie z actualSets
-                    // żeby formuła dawała aktualny ciężar (nie resetuj do 20kg)
-                    if (!tplEx.startSets || !tplEx.startSets.length) {
-                        tplEx.startSets = (tplEx.actualSets || wEx.actualSets || []).map(s => ({
-                            reps: s.reps,
-                            w: Math.max(0, (s.w || tplEx.startWeight || 20) - _steps * _kg),
-                            rpe: s.rpe
-                        }));
-                        tplEx.startWeight = tplEx.startSets[0]?.w ?? 20;
-                    }
+                        // Migracja: brak startSets → wylicz wstecznie z actualSets
+                        // żeby formuła dawała aktualny ciężar (nie resetuj do 20kg)
+                        if (!tplEx.startSets || !tplEx.startSets.length) {
+                            tplEx.startSets = (tplEx.actualSets || wEx.actualSets || []).map(s => ({
+                                reps: s.reps,
+                                w: Math.max(0, (s.w || tplEx.startWeight || 20) - _steps * _kg),
+                                rpe: s.rpe
+                            }));
+                            tplEx.startWeight = tplEx.startSets[0]?.w ?? 20;
+                        }
 
-                    // Recalibruj startSets TYLKO gdy ciężar faktycznie zmieniony przez użytkownika
-                    // (różni się od tego co formuła wygenerowała dla tego treningu)
-                    const _formulaW = (tplEx.startSets?.[0]?.w || 0) + _steps * _kg;
-                    const _actualW  = wEx.actualSets?.[0]?.w ?? _formulaW;
-                    if (Math.abs(_actualW - _formulaW) > 0.1 && wEx.actualSets && wEx.actualSets.length) {
-                        // Użytkownik ręcznie zmienił ciężar – nowa baza progresji
-                        // Używamy count+1 (po inkrementacji) żeby kolejny trening dał DOKŁADNIE ten ciężar
-                        const _nextSteps = Math.floor((_count + 1) / _sess);
-                        tplEx.startSets = wEx.actualSets.map(s => ({
-                            reps: s.reps,
-                            w: Math.max(0, s.w - _nextSteps * _kg),
-                            rpe: s.rpe
-                        }));
-                        tplEx.startWeight = tplEx.startSets[0].w;
+                        // Recalibruj startSets TYLKO gdy ciężar faktycznie zmieniony przez użytkownika
+                        // (różni się od tego co formuła wygenerowała dla tego treningu)
+                        const _formulaW = (tplEx.startSets?.[0]?.w || 0) + _steps * _kg;
+                        const _actualW  = wEx.actualSets?.[0]?.w ?? _formulaW;
+                        if (Math.abs(_actualW - _formulaW) > 0.1 && wEx.actualSets && wEx.actualSets.length) {
+                            // Użytkownik ręcznie zmienił ciężar – nowa baza progresji
+                            // Używamy count+1 (po inkrementacji) żeby kolejny trening dał DOKŁADNIE ten ciężar
+                            const _nextSteps = Math.floor((_count + 1) / _sess);
+                            tplEx.startSets = wEx.actualSets.map(s => ({
+                                reps: s.reps,
+                                w: Math.max(0, s.w - _nextSteps * _kg),
+                                rpe: s.rpe
+                            }));
+                            tplEx.startWeight = tplEx.startSets[0].w;
+                        }
                     }
                 }
             });
@@ -1077,7 +1083,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
         }
 
         function updateTemplateFromWorkout(templateId, workoutExercises) {
-            syncTemplateFromWorkout(templateId, workoutExercises);
+            syncTemplateFromWorkout(templateId, workoutExercises, true); // doCalibrate=true – tylko tu recalibrujemy startSets
             // Licznik rośnie tylko przy zakończeniu treningu
             templateUsageCount[templateId] = (templateUsageCount[templateId] || 0) + 1;
             saveData();
