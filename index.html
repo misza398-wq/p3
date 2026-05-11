@@ -270,6 +270,7 @@
                 <button id="prog-apply-add" class="btn btn-sm" style="background:var(--success);color:#fff;border-color:transparent;white-space:nowrap;">+ Dodaj</button>
                 <button id="prog-apply-sub" class="btn btn-sm" style="background:var(--danger);color:#fff;border-color:transparent;white-space:nowrap;">− Odejmij</button>
                 <span id="prog-last-change" style="font-size:0.78rem;color:var(--text-3);margin-left:4px;font-style:italic;"></span>
+                <span id="prog-lock-note" style="display:none;font-size:0.78rem;color:var(--danger);font-weight:700;">🔒 Trening wykonany</span>
             </div>
             <div class="table-responsive">
                 <table class="workout-table">
@@ -680,6 +681,17 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                 if(totCnt>0){ctr.textContent=`${doneCnt}/${totCnt} ćwiczeń`;ctr.style.color=doneCnt===totCnt?'var(--success)':'var(--accent)';ctr.style.background=doneCnt===totCnt?'rgba(16,185,129,0.15)':'var(--accent-dim)';}else{ctr.textContent='';}
                 // Pokaż adnotację ostatniej zmiany obciążeń
                 if (typeof updateProgAnnotation === 'function') updateProgAnnotation(w);
+                // Blokada panelu gdy trening wykonany
+                const isLocked = w.status === 'completed';
+                ['prog-apply-add','prog-apply-sub','prog-kg-minus','prog-kg-plus','workout-prog-kg'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.disabled = isLocked;
+                    el.style.opacity = isLocked ? '0.4' : '1';
+                    el.style.cursor = isLocked ? 'not-allowed' : '';
+                });
+                const lockNote = document.getElementById('prog-lock-note');
+                if (lockNote) lockNote.style.display = isLocked ? 'inline' : 'none';
             } else if(w.type==='run'||w.type==='home') {
                 document.getElementById('cardio-duration').value = w.duration? Math.round(w.duration/60) : 30;
                 document.getElementById('cardio-hr').value = w.avgHr||140;
