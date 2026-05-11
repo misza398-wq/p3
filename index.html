@@ -257,6 +257,18 @@
                 <span>✅ Status: <strong id="completion-status">Zaplanowano</strong></span>
                 <span id="exercises-counter" style="font-size:0.85rem;font-weight:700;color:var(--accent);background:var(--accent-dim);border-radius:var(--r-pill);padding:3px 12px;"></span>
             </div>
+
+            <!-- PANEL PROGRESJI – jeden wspólny dla całego treningu -->
+            <div id="workout-prog-panel" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;margin-bottom:10px;background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.22);border-radius:12px;">
+                <span style="font-size:0.85rem;font-weight:700;color:var(--accent);white-space:nowrap;">⚡ Dodaj kg do wszystkich:</span>
+                <div style="display:flex;align-items:center;gap:4px;">
+                    <button id="prog-kg-minus" class="btn btn-sm" style="min-width:32px;padding:4px 10px;">−</button>
+                    <input id="workout-prog-kg" class="editable" type="number" value="2.5" step="0.5" min="0" style="width:64px;text-align:center;">
+                    <button id="prog-kg-plus" class="btn btn-sm" style="min-width:32px;padding:4px 10px;">+</button>
+                </div>
+                <span style="font-size:0.8rem;color:var(--text-3);">kg</span>
+                <button id="prog-apply-kg" class="btn btn-sm" style="background:var(--accent);color:#fff;border-color:transparent;white-space:nowrap;">Zastosuj</button>
+            </div>
             <div class="table-responsive">
                 <table class="workout-table">
                     <thead><tr><th>Ćwiczenie</th><th>Serie</th><th>Objętość</th><th>RPE</th><th></th></tr></thead>
@@ -311,7 +323,7 @@
             <h4 id="template-form-title">Nowy szablon</h4><input type="hidden" id="edit-template-id">
             <div class="tpl-form-fields">
                 <label>Nazwa: <input type="text" id="template-name" style="width:180px;"></label>
-                <label>Progresja: +<input type="number" id="template-progress-kg" value="2.5" min="0" step="0.5" style="width:68px;"> kg co <input type="number" id="template-progress-sessions" value="3" min="1" style="width:68px;"> treningi</label>
+
             </div>
             <h5>Ćwiczenia</h5>
             <div id="tpl-exercises-list" style="margin-top:10px;"></div>
@@ -430,7 +442,6 @@
         let weeklyTemplate = { 1:'strength', 2:'run', 3:'strength', 4:'home', 5:'strength', 6:'run', 0:'rest' };
         let templateAssignments = {};      
         let templates = [];               
-        let templateUsageCount = {};      
         let progressChart = null, weeklyChart = null, templateVolumeChart = null, weightChart = null, cardioChart = null;
         let userHeight = 175, userWeight = 70, restingHR = 60;
         let personalRecords = {};
@@ -466,15 +477,15 @@
         // ---------- LOCALSTORAGE ----------
         function loadData() {
             const saved = localStorage.getItem('cykl_pro_serie');
-            if(saved) { try { const data = JSON.parse(saved); workouts = data.workouts || {}; exerciseHistory = data.exerciseHistory || {}; weeklyTemplate = data.weeklyTemplate || weeklyTemplate; templateAssignments = data.templateAssignments || {}; templateUsageCount = data.templateUsageCount || {}; userHeight = data.userHeight || 175; userWeight = data.userWeight || 70; restingHR = data.restingHR || 60; personalRecords = data.personalRecords || {}; weightHistory = data.weightHistory || {}; reminderTime = data.reminderTime || '08:00'; Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; }); Object.keys(workouts).forEach(ds => { const w = workouts[ds]; if (w.type === 'rest' && w.status === 'planned' && !w.notes && !(w.exercises && w.exercises.length) && !w.manuallyDeleted) delete workouts[ds]; }); (data.templates||[]).forEach(tpl => { (tpl.exercises||[]).forEach(ex => { if (!ex.startSets || !ex.startSets.length) { const sw = ex.startWeight || 20; ex.startSets = Array(ex.sets||3).fill(null).map((_,si) => ({ reps: ex.actualSets?.[si]?.reps||8, w: sw, rpe: ex.actualSets?.[si]?.rpe||8 })); } }); }); templates = data.templates || []; } catch(e){} }
-            if(templates.length === 0) { templates.push({ id: 'tpl1', name: 'Push A', progressionKg: 2.5, progressionSessions: 3, exercises: [ { name: 'Wyciskanie sztangi leżąc', sets: 4, startWeight: 80, startSets: Array(4).fill(null).map(()=>({reps:8, w:80, rpe:8})), actualSets: Array(4).fill(null).map(()=>({reps:8, w:80, rpe:8})) }, { name: 'Wyciskanie żołnierskie', sets: 3, startWeight: 40, startSets: Array(3).fill(null).map(()=>({reps:10, w:40, rpe:8})), actualSets: Array(3).fill(null).map(()=>({reps:10, w:40, rpe:8})) } ]}); templates.push({ id: 'tpl2', name: 'Pull A', progressionKg: 2.5, progressionSessions: 3, exercises: [ { name: 'Martwy ciąg', sets: 3, startWeight: 100, startSets: Array(3).fill(null).map(()=>({reps:6, w:100, rpe:8})), actualSets: Array(3).fill(null).map(()=>({reps:6, w:100, rpe:8})) }, { name: 'Podciąganie', sets: 3, startWeight: 0, startSets: Array(3).fill(null).map(()=>({reps:6, w:0, rpe:8})), actualSets: Array(3).fill(null).map(()=>({reps:6, w:0, rpe:8})) } ]}); templateUsageCount = { 'tpl1': 0, 'tpl2': 0 }; }
+            if(saved) { try { const data = JSON.parse(saved); workouts = data.workouts || {}; exerciseHistory = data.exerciseHistory || {}; weeklyTemplate = data.weeklyTemplate || weeklyTemplate; templateAssignments = data.templateAssignments || {}; userHeight = data.userHeight || 175; userWeight = data.userWeight || 70; restingHR = data.restingHR || 60; personalRecords = data.personalRecords || {}; weightHistory = data.weightHistory || {}; reminderTime = data.reminderTime || '08:00'; Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; }); Object.keys(workouts).forEach(ds => { const w = workouts[ds]; if (w.type === 'rest' && w.status === 'planned' && !w.notes && !(w.exercises && w.exercises.length) && !w.manuallyDeleted) delete workouts[ds]; }); templates = data.templates || []; } catch(e){} }
+            if(templates.length === 0) { templates.push({ id: 'tpl1', name: 'Push A', exercises: [ { name: 'Wyciskanie sztangi leżąc', sets: 4, progKg: 2.5, actualSets: Array(4).fill(null).map(()=>({reps:8, w:80, rpe:8})) }, { name: 'Wyciskanie żołnierskie', sets: 3, progKg: 2.5, actualSets: Array(3).fill(null).map(()=>({reps:10, w:40, rpe:8})) } ]}); templates.push({ id: 'tpl2', name: 'Pull A', exercises: [ { name: 'Martwy ciąg', sets: 3, progKg: 2.5, actualSets: Array(3).fill(null).map(()=>({reps:6, w:100, rpe:8})) }, { name: 'Podciąganie', sets: 3, progKg: 2.5, actualSets: Array(3).fill(null).map(()=>({reps:6, w:0, rpe:8})) } ]}); }
             document.getElementById('user-height').value = userHeight;
             document.getElementById('user-weight').value = userWeight;
             document.getElementById('resting-hr').value = restingHR;
             updateBMI();
             updateWeightDiff();
         }
-        function saveData() { localStorage.setItem('cykl_pro_serie', JSON.stringify({ workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, templateUsageCount, userHeight, userWeight, restingHR, personalRecords, weightHistory, reminderTime })); }
+        function saveData() { localStorage.setItem('cykl_pro_serie', JSON.stringify({ workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, userHeight, userWeight, restingHR, personalRecords, weightHistory, reminderTime })); }
         function loadLifeData() { const saved = localStorage.getItem('cykl_life'); if(saved) { try { const data = JSON.parse(saved); lifeCategories = data.categories || lifeCategories; lifeData = data.records || {}; } catch(e){} } }
         function saveLifeData() { localStorage.setItem('cykl_life', JSON.stringify({ categories: lifeCategories, records: lifeData })); }
 
@@ -576,33 +587,18 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             const tpl = templates.find(t=>t.id===templateId);
             if(!tpl) return null;
 
-            // Globalny licznik wykonanych – cały czas rośnie, nigdy nie resetuje
-            const count = templateUsageCount[templateId] || 0;
-
             const exercises = tpl.exercises.map((ex, i) => {
-                const kg   = ex.progressionKg   ?? tpl.progressionKg   ?? 2.5;
-                const sess = ex.progressionSessions ?? tpl.progressionSessions ?? 3;
-                const steps = Math.floor(count / sess);
-
-                // startSets = ORYGINALNE ciężary (nigdy nie zmieniane po zapisie szablonu)
-                const startSets = ex.startSets && ex.startSets.length
-                    ? ex.startSets
-                    : Array(ex.sets).fill(null).map(() => ({reps:8, w:ex.startWeight||20, rpe:8}));
-
-                // actualSets = reps/rpe z ostatniego wykonanego treningu
-                const repsSets = ex.actualSets && ex.actualSets.length ? ex.actualSets : startSets;
-
-                const newSets = Array(ex.sets).fill(null).map((_, si) => {
-                    const sw = startSets[si] || startSets[startSets.length-1];
-                    const rs = repsSets[si]  || repsSets[repsSets.length-1];
-                    return { reps: rs.reps, w: sw.w + steps * kg, rpe: rs.rpe };
-                });
+                const actualSets = ex.actualSets && ex.actualSets.length
+                    ? JSON.parse(JSON.stringify(ex.actualSets))
+                    : Array(ex.sets||3).fill(null).map(()=>({reps:8, w:20, rpe:8}));
 
                 return {
                     id: ex.name+Date.now()+i+Math.random(),
-                    name: ex.name, sets: ex.sets,
-                    plannedWeight: newSets[0].w,
-                    actualSets: newSets,
+                    name: ex.name,
+                    sets: ex.sets,
+                    plannedWeight: actualSets[0]?.w || 20,
+                    actualSets,
+                    progKg: ex.progKg ?? 2.5,
                     templateExercise: true
                 };
             });
@@ -846,7 +842,6 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                         w.exercises[idx].manuallyEdited=true;
                     }
                     w.exercises[idx].collapsed=!w.exercises[idx].collapsed;
-                    if (w.templateId) syncTemplateFromWorkout(w.templateId, w.exercises, false);
                     renderWorkoutPanel(); saveData();
                 });
             });
@@ -896,7 +891,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                     if (!fresh.plannedVolume) fresh.plannedVolume = calculateVolumeFromExercises(fresh.exercises);
                     fresh.exercises.splice(idx,1);
                     fresh.exercisesModified = true;
-                    if (fresh.templateId) syncTemplateFromWorkout(fresh.templateId, fresh.exercises, false);
+                    if (fresh.templateId) { /* ciężary aktualizowane przy zakończeniu treningu */ }
                     if(exName&&exerciseHistory[exName]){exerciseHistory[exName]=exerciseHistory[exName].filter(e=>e.date!==ds); if(!exerciseHistory[exName].length) delete exerciseHistory[exName];}
                     renderWorkoutPanel(); saveData();
                 };
@@ -993,7 +988,6 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                 const idx=+b.dataset.idx;
                 saveInlineValues(idx,w);
                 w.exercises[idx].done=true; w.exercises[idx].collapsed=true; w.exercises[idx].manuallyEdited=true;
-                if (w.templateId) syncTemplateFromWorkout(w.templateId, w.exercises, false);
                 document.getElementById('total-volume').textContent=calculateVolumeFromExercises(w.exercises);
                 updateVolumeDiffDisplay(calculateVolumeFromExercises(w.exercises));
                 renderWorkoutPanel(); saveData();
@@ -1004,93 +998,38 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             if(!workouts[d]) workouts[d] = { type:'strength', exercises:[], deload:false, status:'planned', notes:'' };
             // Zapamiętaj plannedVolume PRZED dodaniem (jeśli jeszcze nie ustawione)
             if (!workouts[d].plannedVolume) workouts[d].plannedVolume = calculateVolumeFromExercises(workouts[d].exercises);
-            workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedWeight:20, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), templateExercise: false, collapsed: false });
+            workouts[d].exercises.push({ id: name+Date.now(), name, sets:3, plannedWeight:20, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), progKg: 2.5, templateExercise: false, collapsed: false });
             workouts[d].exercisesModified = true;
-            if (workouts[d].templateId) syncTemplateFromWorkout(workouts[d].templateId, workouts[d].exercises, false);
             renderWorkoutPanel(); saveData();
         }
 
         // ---------- AKTUALIZACJA SZABLONU ----------
-        // doCalibrate=true TYLKO przy finalizacji treningu (updateTemplateFromWorkout).
-        // Śródsesyjne wywołania (zwijanie, "wykonane") używają doCalibrate=false,
-        // żeby wielokrotny sync nie zepsuł startSets przed zakończeniem treningu.
-        function syncTemplateFromWorkout(templateId, workoutExercises, doCalibrate) {
+        // Prosta funkcja: zapisuje actualSets i progKg z treningu do szablonu (baza dla kolejnego treningu)
+        function syncActualSetsToTemplate(templateId, workoutExercises) {
             const tpl = templates.find(t => t.id === templateId);
             if (!tpl) return;
-
             workoutExercises.forEach(wEx => {
                 let tplEx = tpl.exercises.find(e => e.name === wEx.name);
                 if (!tplEx) {
-                    // Nowe ćwiczenie – startSets = aktualne ciężary (baza dla progresji od teraz)
-                    const baseSets = wEx.actualSets ? JSON.parse(JSON.stringify(wEx.actualSets)) : null;
-                    tplEx = {
+                    tpl.exercises.push({
                         name: wEx.name, sets: wEx.sets,
-                        startWeight: wEx.actualSets?.[0]?.w || 20,
-                        startSets: baseSets, // baza – nie zmienia się nigdy potem
-                        actualSets: baseSets ? JSON.parse(JSON.stringify(baseSets)) : null,
-                        progressionKg: null, progressionSessions: null
-                    };
-                    tpl.exercises.push(tplEx);
+                        actualSets: wEx.actualSets ? JSON.parse(JSON.stringify(wEx.actualSets)) : null,
+                        progKg: wEx.progKg ?? 2.5
+                    });
                 } else {
-                    // Istniejące – aktualizuj actualSets (reps/rpe/w wykonane)
-                    if (wEx.actualSets && wEx.actualSets.length) {
-                        tplEx.actualSets = wEx.actualSets.map(s => ({reps:s.reps, w:s.w, rpe:s.rpe}));
-                    }
+                    if (wEx.actualSets?.length) tplEx.actualSets = JSON.parse(JSON.stringify(wEx.actualSets));
                     tplEx.sets = wEx.sets;
-
-                    // Recalibracja startSets TYLKO przy finalizacji treningu
-                    if (doCalibrate) {
-                        const _kg   = tplEx.progressionKg   ?? tpl.progressionKg   ?? 2.5;
-                        const _sess = tplEx.progressionSessions ?? tpl.progressionSessions ?? 3;
-                        const _count = templateUsageCount[tpl.id] || 0; // przed inkrementacją
-                        const _steps = Math.floor(_count / _sess);
-
-                        // Migracja: brak startSets → wylicz wstecznie z actualSets
-                        // żeby formuła dawała aktualny ciężar (nie resetuj do 20kg)
-                        if (!tplEx.startSets || !tplEx.startSets.length) {
-                            tplEx.startSets = (tplEx.actualSets || wEx.actualSets || []).map(s => ({
-                                reps: s.reps,
-                                w: Math.max(0, (s.w || tplEx.startWeight || 20) - _steps * _kg),
-                                rpe: s.rpe
-                            }));
-                            tplEx.startWeight = tplEx.startSets[0]?.w ?? 20;
-                        }
-
-                        // Recalibruj startSets TYLKO gdy ciężar faktycznie zmieniony przez użytkownika
-                        // (różni się od tego co formuła wygenerowała dla tego treningu)
-                        const _formulaW = (tplEx.startSets?.[0]?.w || 0) + _steps * _kg;
-                        const _actualW  = wEx.actualSets?.[0]?.w ?? _formulaW;
-                        if (Math.abs(_actualW - _formulaW) > 0.1 && wEx.actualSets && wEx.actualSets.length) {
-                            // Użytkownik ręcznie zmienił ciężar – nowa baza progresji
-                            // Używamy count+1 (po inkrementacji) żeby kolejny trening dał DOKŁADNIE ten ciężar
-                            const _nextSteps = Math.floor((_count + 1) / _sess);
-                            tplEx.startSets = wEx.actualSets.map(s => ({
-                                reps: s.reps,
-                                w: Math.max(0, s.w - _nextSteps * _kg),
-                                rpe: s.rpe
-                            }));
-                            tplEx.startWeight = tplEx.startSets[0].w;
-                        }
-                    }
+                    if (wEx.progKg != null) tplEx.progKg = wEx.progKg;
                 }
             });
-
             // Usuń ćwiczenia skasowane podczas treningu
             const workoutNames = new Set(workoutExercises.map(e => e.name));
             tpl.exercises = tpl.exercises.filter(e => workoutNames.has(e.name));
-
-            saveData();
-        }
-
-        function updateTemplateFromWorkout(templateId, workoutExercises) {
-            syncTemplateFromWorkout(templateId, workoutExercises, true); // doCalibrate=true – tylko tu recalibrujemy startSets
-            // Licznik rośnie tylko przy zakończeniu treningu
-            templateUsageCount[templateId] = (templateUsageCount[templateId] || 0) + 1;
             saveData();
             if (document.getElementById('templates-panel').classList.contains('active')) renderTemplatesPanel();
         }
-        function resetWorkoutToPlanned(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w || w.status === 'planned') return; const wasCompleted = w.status === 'completed'; w.status = 'planned'; delete w.plannedVolume; if (wasCompleted) { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); if (w.templateId && w.type === 'strength' && !w.deload) templateUsageCount[w.templateId] = Math.max(0, (templateUsageCount[w.templateId] || 1) - 1); } if(w.exercises) w.exercises.forEach(ex=>{ex.done=false; ex.collapsed=true; ex.seriesCollapsed=null; if(ex.actualSets) ex.actualSets.forEach(s=>{ delete s.done; });}); saveData(); renderCalendar(); renderWorkoutPanel(); }
-        function deleteWorkout(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w) return; if (w.status === 'completed') { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); if (w.templateId && w.type === 'strength' && !w.deload) templateUsageCount[w.templateId] = Math.max(0, (templateUsageCount[w.templateId] || 1) - 1); } // Zapisz flagę zamiast usuwać – zapobiega regeneracji z szablonu
+        function resetWorkoutToPlanned(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w || w.status === 'planned') return; const wasCompleted = w.status === 'completed'; w.status = 'planned'; delete w.plannedVolume; if (wasCompleted) { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); } if(w.exercises) w.exercises.forEach(ex=>{ex.done=false; ex.collapsed=true; ex.seriesCollapsed=null; if(ex.actualSets) ex.actualSets.forEach(s=>{ delete s.done; });}); saveData(); renderCalendar(); renderWorkoutPanel(); }
+        function deleteWorkout(date) { const ds = formatDate(date); const w = workouts[ds]; if (!w) return; if (w.status === 'completed') { Object.keys(exerciseHistory).forEach(exName => { exerciseHistory[exName] = exerciseHistory[exName].filter(entry => entry.date !== ds); if (exerciseHistory[exName].length === 0) delete exerciseHistory[exName]; }); } // Zapisz flagę zamiast usuwać – zapobiega regeneracji z szablonu
             workouts[ds] = { type: 'rest', status: 'planned', notes: '', manuallyDeleted: true }; saveData(); renderCalendar(); renderWorkoutPanel(); }
         function updateHistory(date) {
             const w = workouts[formatDate(date)];
@@ -1234,10 +1173,6 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                 if (sel && namInp) ex.name = sel.value === '__NEW__' ? namInp.value.trim() : sel.value;
                 const setsEl = card.querySelector('.tpl-ex-sets');
                 if (setsEl) ex.sets = Math.max(1, +setsEl.value || ex.sets);
-                const progKgEl = card.querySelector('.tpl-ex-prog-kg');
-                if (progKgEl) ex.progressionKg = progKgEl.value !== '' ? parseFloat(progKgEl.value) : null;
-                const progSessEl = card.querySelector('.tpl-ex-prog-sess');
-                if (progSessEl) ex.progressionSessions = progSessEl.value !== '' ? parseInt(progSessEl.value) : null;
                 if (ex.actualSets && ex.seriesCollapsed) {
                     ex.actualSets.forEach((s, si) => {
                         if (ex.seriesCollapsed[si] === false) {
@@ -1290,13 +1225,6 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                             </div>`;
                         }
                     });
-                    seriesHtml += `<div style="display:flex;gap:8px;align-items:center;margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);flex-wrap:wrap;">
-                        <span style="font-size:0.82rem;color:var(--text-2);">📈 Progresja: +</span>
-                        <input type="number" class="tpl-ex-prog-kg editable" data-idx="${idx}" value="${ex.progressionKg ?? ''}" placeholder="+kg" step="0.5" style="width:58px;">
-                        <span style="font-size:0.82rem;color:var(--text-3);">kg co</span>
-                        <input type="number" class="tpl-ex-prog-sess editable" data-idx="${idx}" value="${ex.progressionSessions ?? ''}" placeholder="N" style="width:58px;">
-                        <span style="font-size:0.82rem;color:var(--text-3);">treningów</span>
-                    </div>`;
                 }
 
                 const card = document.createElement('div');
@@ -1413,8 +1341,8 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             }), 10);
         }
 
-        function renderTemplatesPanel() { const list = document.getElementById('templates-list'); list.innerHTML = templates.map(t => `<div class="template-card"><div class="template-header"><div class="template-title">${t.name}</div><div class="template-stats">📈 +${t.progressionKg ?? t.progressionPercent ?? 2.5}kg co ${t.progressionSessions} tr. | Wykonań: <strong>${templateUsageCount[t.id]||0}</strong></div><div class="template-actions"><button class="btn btn-sm edit-template" data-id="${t.id}">✏️ Edytuj</button><button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button></div></div><ul class="template-exercises">${t.exercises.map(e=>`<li>${e.name}: ${e.sets} serii</li>`).join('')}</ul></div>`).join(''); document.querySelectorAll('.edit-template').forEach(b => b.addEventListener('click', ()=> editTemplate(b.dataset.id))); document.querySelectorAll('.delete-template').forEach(b => b.addEventListener('click', ()=> { inlineConfirm(b, 'Usunąć szablon?', () => { templates = templates.filter(t => t.id !== b.dataset.id); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); }); })); }
-        function editTemplate(id) { const tpl = templates.find(t => t.id === id); if(!tpl) return; document.getElementById('template-form-title').textContent = 'Edytuj szablon'; document.getElementById('edit-template-id').value = id; document.getElementById('template-name').value = tpl.name; document.getElementById('template-progress-kg').value = tpl.progressionKg ?? tpl.progressionPercent ?? 2.5; document.getElementById('template-progress-sessions').value = tpl.progressionSessions; renderTemplateExercisesTable(tpl.exercises); document.getElementById('template-form').style.display = 'block'; }
+        function renderTemplatesPanel() { const list = document.getElementById('templates-list'); list.innerHTML = templates.map(t => `<div class="template-card"><div class="template-header"><div class="template-title">${t.name}</div><div class="template-stats">💪 ${t.exercises.length} ćwiczeń</div><div class="template-actions"><button class="btn btn-sm edit-template" data-id="${t.id}">✏️ Edytuj</button><button class="btn btn-sm delete-template" data-id="${t.id}">🗑️</button></div></div><ul class="template-exercises">${t.exercises.map(e=>`<li>${e.name}: ${e.sets} serii · baza ${e.actualSets?.[0]?.w??'—'}kg</li>`).join('')}</ul></div>`).join(''); document.querySelectorAll('.edit-template').forEach(b => b.addEventListener('click', ()=> editTemplate(b.dataset.id))); document.querySelectorAll('.delete-template').forEach(b => b.addEventListener('click', ()=> { inlineConfirm(b, 'Usunąć szablon?', () => { templates = templates.filter(t => t.id !== b.dataset.id); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); }); })); }
+        function editTemplate(id) { const tpl = templates.find(t => t.id === id); if(!tpl) return; document.getElementById('template-form-title').textContent = 'Edytuj szablon'; document.getElementById('edit-template-id').value = id; document.getElementById('template-name').value = tpl.name; renderTemplateExercisesTable(tpl.exercises); document.getElementById('template-form').style.display = 'block'; }
         function bindExerciseSelector(row) {
             const sel = row.querySelector('.tpl-ex-name-sel');
             const inp = row.querySelector('.tpl-ex-name-inp');
@@ -1428,13 +1356,9 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
         function renderTemplateExercisesTable(exercises) {
             tplFormExercises = exercises.map(ex => {
                 const sets = ex.sets || 3;
-                const actualSets = ex.actualSets ? JSON.parse(JSON.stringify(ex.actualSets)) : Array(sets).fill(null).map((_,si)=>({reps:8,w:ex.startWeight||20,rpe:8}));
-                let startSets;
-                if (ex.startSets && ex.startSets.length) startSets = JSON.parse(JSON.stringify(ex.startSets));
-                else if (ex.startWeight) startSets = Array(sets).fill(null).map((_,si)=>({reps:actualSets[si]?.reps||8,w:ex.startWeight,rpe:actualSets[si]?.rpe||8}));
-                else startSets = null;
+                const actualSets = ex.actualSets ? JSON.parse(JSON.stringify(ex.actualSets)) : Array(sets).fill(null).map(()=>({reps:8,w:20,rpe:8}));
                 const sc = Array(sets).fill(false);
-                return { name: ex.name||'', sets, actualSets, startSets, progressionKg: ex.progressionKg ?? ex.progressionPercent ?? null, progressionSessions: ex.progressionSessions||null, collapsed: false, seriesCollapsed: sc };
+                return { name: ex.name||'', sets, actualSets, progKg: ex.progKg ?? 2.5, collapsed: false, seriesCollapsed: sc };
             });
             renderTplFormExercises();
         }
@@ -1442,9 +1366,7 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             saveTplAllFromDOM();
             return tplFormExercises.map(ex => {
                 const actualSets = ex.actualSets || Array(ex.sets).fill(null).map(()=>({reps:8,w:20,rpe:8}));
-                const startSets = ex.startSets || JSON.parse(JSON.stringify(actualSets));
-                const startWeight = startSets.reduce((s,r)=>s+r.w,0)/startSets.length;
-                return { name: ex.name, sets: ex.sets, startWeight, progressionKg: ex.progressionKg, progressionSessions: ex.progressionSessions, actualSets, startSets };
+                return { name: ex.name, sets: ex.sets, actualSets };
             }).filter(e=>e.name);
         }
         function getAllKnownExercises() { const s = new Set([...allPresetExercises, ...Object.keys(exerciseHistory), ...Array.from(favoriteExercises)]); templates.forEach(t=>t.exercises.forEach(e=>s.add(e.name))); return Array.from(s).sort(); }
@@ -1501,15 +1423,14 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                     exercises.push({
                         name: parsed.name,
                         sets: parsed.sets,
-                        startWeight: parsed.weightsPerSet[0],
-                        startSets: JSON.parse(JSON.stringify(actualSets)),
+                        progKg: 2.5,
                         actualSets
                     });
                 }
             }
             if (exercises.length === 0) { alert('Nie znaleziono żadnych poprawnych ćwiczeń.'); return; }
             const name = templateName || `Import ${new Date().toLocaleDateString('pl')}`;
-            templates.push({ id: 'tpl_' + Date.now(), name, progressionKg: 2.5, progressionSessions: 3, exercises });
+            templates.push({ id: 'tpl_' + Date.now(), name, exercises });
             saveData(); renderTemplatesPanel(); renderHarmonogramDays();
             alert(`✅ Utworzono szablon "${name}" z ${exercises.length} ćwiczeniami.`);
         }
@@ -1673,16 +1594,12 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             document.getElementById('complete-workout-btn').addEventListener('click', ()=>{ const ds = formatDate(selectedDate); const w = workouts[ds]; if(!w) return;
                 // Zapisz wartości ze wszystkich otwartych ćwiczeń przed ukończeniem
                 if(w.type==='strength') (w.exercises||[]).forEach((_,idx)=>{ if(!w.exercises[idx].collapsed) saveInlineValues(idx,w); });
-                w.deload = document.getElementById('deload-checkbox').checked; w.status = 'completed'; w.notes = document.getElementById('workout-notes').value; if(w.type!=='strength') { w.duration = +document.getElementById('cardio-duration').value*60; w.avgHr = +document.getElementById('cardio-hr').value; } if(w.templateId && w.type==='strength' && !w.deload) { updateTemplateFromWorkout(w.templateId, w.exercises); // templateUsageCount jest resetowane do 0 przez updateTemplateFromWorkout, więc nie inkrementujemy tutaj
+                w.deload = document.getElementById('deload-checkbox').checked; w.status = 'completed'; w.notes = document.getElementById('workout-notes').value; if(w.type!=='strength') { w.duration = +document.getElementById('cardio-duration').value*60; w.avgHr = +document.getElementById('cardio-hr').value; } if(w.templateId && w.type==='strength' && !w.deload) { syncActualSetsToTemplate(w.templateId, w.exercises);
                 const toast=document.createElement('div'); toast.textContent='✅ Plan treningowy zaktualizowany!'; toast.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:10px 22px;border-radius:var(--r-pill);font-weight:700;font-size:0.9rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.2);'; document.body.appendChild(toast); setTimeout(()=>toast.remove(),2500); } updateHistory(new Date(ds)); saveData(); renderCalendar(); renderWorkoutPanel(); });
             document.getElementById('uncomplete-workout-btn').addEventListener('click', ()=>{
                 const ds = formatDate(selectedDate);
                 const w = workouts[ds];
                 if (!w) return;
-                // Tylko odklikaj status - zachowaj dane treningu
-                if (w.templateId && w.type === 'strength' && !w.deload && templateUsageCount[w.templateId] > 0) {
-                    templateUsageCount[w.templateId] = Math.max(0, templateUsageCount[w.templateId] - 1);
-                }
                 w.status = 'planned';
                 delete w.plannedVolume;
                 saveData(); renderCalendar(); renderWorkoutPanel();
@@ -1700,15 +1617,43 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             document.getElementById('toggle-new-exercise').addEventListener('click', ()=>{ const sel = document.getElementById('exercise-select'); const inp = document.getElementById('new-exercise-name'); if (sel.style.display !== 'none') { sel.style.display = 'none'; inp.style.display = 'block'; inp.focus(); } else { sel.style.display = 'block'; inp.style.display = 'none'; } });
             document.getElementById('add-selected-exercise').addEventListener('click', ()=>{ const sel = document.getElementById('exercise-select'); const inp = document.getElementById('new-exercise-name'); let name = sel.style.display !== 'none' ? sel.value : inp.value.trim(); if (!name) return alert('Wybierz lub wpisz ćwiczenie'); addExercise(name); document.getElementById('add-exercise-form').style.display='none'; });
             document.getElementById('harm-prev-month').addEventListener('click', () => { harmDate.setMonth(harmDate.getMonth()-1); renderHarmonogramDays(); });
+
+            // ── Panel progresji – listenery raz na zawsze ──
+            const progKgInp = document.getElementById('workout-prog-kg');
+            document.getElementById('prog-kg-minus').addEventListener('click', () => {
+                progKgInp.value = Math.max(0, Math.round((parseFloat(progKgInp.value) - 0.5) * 10) / 10);
+            });
+            document.getElementById('prog-kg-plus').addEventListener('click', () => {
+                progKgInp.value = Math.round((parseFloat(progKgInp.value) + 0.5) * 10) / 10;
+            });
+            document.getElementById('prog-apply-kg').addEventListener('click', () => {
+                const kg = parseFloat(progKgInp.value) || 0;
+                if (!kg) return;
+                const ds = formatDate(selectedDate);
+                const ww = workouts[ds];
+                if (!ww || ww.type !== 'strength') return;
+                // Zapisz wartości z otwartych inputów przed zmianą
+                (ww.exercises || []).forEach((_, i) => { if (!ww.exercises[i].collapsed) saveInlineValues(i, ww); });
+                // Dodaj kg do każdej serii każdego ćwiczenia
+                (ww.exercises || []).forEach(ex => {
+                    if (!ex.actualSets) return;
+                    ex.actualSets = ex.actualSets.map(s => ({
+                        ...s,
+                        w: Math.round((s.w + kg) * 2) / 2
+                    }));
+                    ex.manuallyEdited = true;
+                });
+                renderWorkoutPanel(); saveData();
+            });
             document.getElementById('harm-next-month').addEventListener('click', () => { harmDate.setMonth(harmDate.getMonth()+1); renderHarmonogramDays(); });
             document.getElementById('create-template-btn').addEventListener('click', ()=>{ document.getElementById('edit-template-id').value = ''; document.getElementById('template-name').value = ''; renderTemplateExercisesTable([]); document.getElementById('template-form').style.display = 'block'; });
             document.getElementById('add-exercise-to-template').addEventListener('click', ()=>{
                 saveTplAllFromDOM();
-                tplFormExercises.push({ name:'', sets:3, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), startSets:null, progressionKg:null, progressionSessions:null, collapsed:false, seriesCollapsed:[false,false,false] });
+                tplFormExercises.push({ name:'', sets:3, actualSets: Array(3).fill(null).map(()=>({reps:8,w:20,rpe:8})), progKg:2.5, collapsed:false, seriesCollapsed:[false,false,false] });
                 renderTplFormExercises();
                 document.getElementById('tpl-exercises-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'nearest'});
             });
-            document.getElementById('save-template-btn').addEventListener('click', ()=>{ const id = document.getElementById('edit-template-id').value || 'tpl_'+Date.now(); const name = document.getElementById('template-name').value; const kg = +document.getElementById('template-progress-kg').value; const sess = +document.getElementById('template-progress-sessions').value; const formExs = getTemplateExercisesFromForm(); if(!name || !formExs.length) return alert('Uzupełnij dane'); const tpl = { id, name, progressionKg: kg, progressionSessions: sess, exercises: formExs }; const idx = templates.findIndex(t=>t.id===id); if(idx>=0) templates[idx]=tpl; else templates.push(tpl); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); document.getElementById('template-form').style.display='none'; });
+            document.getElementById('save-template-btn').addEventListener('click', ()=>{ const id = document.getElementById('edit-template-id').value || 'tpl_'+Date.now(); const name = document.getElementById('template-name').value; const formExs = getTemplateExercisesFromForm(); if(!name || !formExs.length) return alert('Uzupełnij dane'); const tpl = { id, name, exercises: formExs }; const idx = templates.findIndex(t=>t.id===id); if(idx>=0) templates[idx]=tpl; else templates.push(tpl); saveData(); renderTemplatesPanel(); renderHarmonogramDays(); document.getElementById('template-form').style.display='none'; });
             document.getElementById('cancel-template-btn').addEventListener('click', ()=> document.getElementById('template-form').style.display='none');
             document.getElementById('save-records-btn').addEventListener('click', ()=>{ document.querySelectorAll('.record-input').forEach(inp => { const ex = inp.dataset.exercise; const v = parseFloat(inp.value); if(!isNaN(v) && v>0) personalRecords[ex] = v; else delete personalRecords[ex]; }); saveData(); alert('✅ Rekordy zapisane'); });
             document.getElementById('progress-exercise-select').addEventListener('change', e=>renderProgressChart(e.target.value));
