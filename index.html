@@ -260,14 +260,16 @@
 
             <!-- PANEL PROGRESJI – jeden wspólny dla całego treningu -->
             <div id="workout-prog-panel" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;margin-bottom:10px;background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.22);border-radius:12px;">
-                <span style="font-size:0.85rem;font-weight:700;color:var(--accent);white-space:nowrap;">⚡ Dodaj kg do wszystkich:</span>
+                <span style="font-size:0.85rem;font-weight:700;color:var(--accent);white-space:nowrap;">⚡ Zmień obciążenie:</span>
                 <div style="display:flex;align-items:center;gap:4px;">
                     <button id="prog-kg-minus" class="btn btn-sm" style="min-width:32px;padding:4px 10px;">−</button>
                     <input id="workout-prog-kg" class="editable" type="number" value="2.5" step="0.5" min="0" style="width:64px;text-align:center;">
                     <button id="prog-kg-plus" class="btn btn-sm" style="min-width:32px;padding:4px 10px;">+</button>
                 </div>
                 <span style="font-size:0.8rem;color:var(--text-3);">kg</span>
-                <button id="prog-apply-kg" class="btn btn-sm" style="background:var(--accent);color:#fff;border-color:transparent;white-space:nowrap;">Zastosuj</button>
+                <button id="prog-apply-add" class="btn btn-sm" style="background:var(--success);color:#fff;border-color:transparent;white-space:nowrap;">+ Dodaj</button>
+                <button id="prog-apply-sub" class="btn btn-sm" style="background:var(--danger);color:#fff;border-color:transparent;white-space:nowrap;">− Odejmij</button>
+                <span id="prog-last-change" style="font-size:0.78rem;color:var(--text-3);margin-left:4px;font-style:italic;"></span>
             </div>
             <div class="table-responsive">
                 <table class="workout-table">
@@ -441,7 +443,8 @@
         let exerciseHistory = {};         
         let weeklyTemplate = { 1:'strength', 2:'run', 3:'strength', 4:'home', 5:'strength', 6:'run', 0:'rest' };
         let templateAssignments = {};      
-        let templates = [];               
+        let templates = [];
+        let weightChangeLog = {};   // { templateId: { date, delta, avgW } }               
         let progressChart = null, weeklyChart = null, templateVolumeChart = null, weightChart = null, cardioChart = null;
         let userHeight = 175, userWeight = 70, restingHR = 60;
         let personalRecords = {};
@@ -477,7 +480,7 @@
         // ---------- LOCALSTORAGE ----------
         function loadData() {
             const saved = localStorage.getItem('cykl_pro_serie');
-            if(saved) { try { const data = JSON.parse(saved); workouts = data.workouts || {}; exerciseHistory = data.exerciseHistory || {}; weeklyTemplate = data.weeklyTemplate || weeklyTemplate; templateAssignments = data.templateAssignments || {}; userHeight = data.userHeight || 175; userWeight = data.userWeight || 70; restingHR = data.restingHR || 60; personalRecords = data.personalRecords || {}; weightHistory = data.weightHistory || {}; reminderTime = data.reminderTime || '08:00'; Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; }); Object.keys(workouts).forEach(ds => { const w = workouts[ds]; if (w.type === 'rest' && w.status === 'planned' && !w.notes && !(w.exercises && w.exercises.length) && !w.manuallyDeleted) delete workouts[ds]; }); templates = data.templates || []; } catch(e){} }
+            if(saved) { try { const data = JSON.parse(saved); workouts = data.workouts || {}; exerciseHistory = data.exerciseHistory || {}; weeklyTemplate = data.weeklyTemplate || weeklyTemplate; templateAssignments = data.templateAssignments || {}; userHeight = data.userHeight || 175; userWeight = data.userWeight || 70; restingHR = data.restingHR || 60; personalRecords = data.personalRecords || {}; weightHistory = data.weightHistory || {}; reminderTime = data.reminderTime || '08:00'; weightChangeLog = data.weightChangeLog || {}; Object.values(workouts).forEach(w => { if (!w.status) w.status = w.completed ? 'completed' : 'planned'; }); Object.keys(workouts).forEach(ds => { const w = workouts[ds]; if (w.type === 'rest' && w.status === 'planned' && !w.notes && !(w.exercises && w.exercises.length) && !w.manuallyDeleted) delete workouts[ds]; }); templates = data.templates || []; } catch(e){} }
             if(templates.length === 0) { templates.push({ id: 'tpl1', name: 'Push A', exercises: [ { name: 'Wyciskanie sztangi leżąc', sets: 4, progKg: 2.5, actualSets: Array(4).fill(null).map(()=>({reps:8, w:80, rpe:8})) }, { name: 'Wyciskanie żołnierskie', sets: 3, progKg: 2.5, actualSets: Array(3).fill(null).map(()=>({reps:10, w:40, rpe:8})) } ]}); templates.push({ id: 'tpl2', name: 'Pull A', exercises: [ { name: 'Martwy ciąg', sets: 3, progKg: 2.5, actualSets: Array(3).fill(null).map(()=>({reps:6, w:100, rpe:8})) }, { name: 'Podciąganie', sets: 3, progKg: 2.5, actualSets: Array(3).fill(null).map(()=>({reps:6, w:0, rpe:8})) } ]}); }
             document.getElementById('user-height').value = userHeight;
             document.getElementById('user-weight').value = userWeight;
@@ -485,7 +488,7 @@
             updateBMI();
             updateWeightDiff();
         }
-        function saveData() { localStorage.setItem('cykl_pro_serie', JSON.stringify({ workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, userHeight, userWeight, restingHR, personalRecords, weightHistory, reminderTime })); }
+        function saveData() { localStorage.setItem('cykl_pro_serie', JSON.stringify({ workouts, exerciseHistory, weeklyTemplate, templateAssignments, templates, weightChangeLog, userHeight, userWeight, restingHR, personalRecords, weightHistory, reminderTime })); }
         function loadLifeData() { const saved = localStorage.getItem('cykl_life'); if(saved) { try { const data = JSON.parse(saved); lifeCategories = data.categories || lifeCategories; lifeData = data.records || {}; } catch(e){} } }
         function saveLifeData() { localStorage.setItem('cykl_life', JSON.stringify({ categories: lifeCategories, records: lifeData })); }
 
@@ -675,6 +678,8 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
                 const totCnt=(w.exercises||[]).length;
                 const ctr=document.getElementById('exercises-counter');
                 if(totCnt>0){ctr.textContent=`${doneCnt}/${totCnt} ćwiczeń`;ctr.style.color=doneCnt===totCnt?'var(--success)':'var(--accent)';ctr.style.background=doneCnt===totCnt?'rgba(16,185,129,0.15)':'var(--accent-dim)';}else{ctr.textContent='';}
+                // Pokaż adnotację ostatniej zmiany obciążeń
+                if (typeof updateProgAnnotation === 'function') updateProgAnnotation(w);
             } else if(w.type==='run'||w.type==='home') {
                 document.getElementById('cardio-duration').value = w.duration? Math.round(w.duration/60) : 30;
                 document.getElementById('cardio-hr').value = w.avgHr||140;
@@ -1621,29 +1626,65 @@ if (status && wType && wType !== 'rest') { const d=document.createElement('span'
             // ── Panel progresji – listenery raz na zawsze ──
             const progKgInp = document.getElementById('workout-prog-kg');
             document.getElementById('prog-kg-minus').addEventListener('click', () => {
-                progKgInp.value = Math.max(0, Math.round((parseFloat(progKgInp.value) - 0.5) * 10) / 10);
+                progKgInp.value = Math.max(0.5, Math.round((parseFloat(progKgInp.value) - 0.5) * 10) / 10);
             });
             document.getElementById('prog-kg-plus').addEventListener('click', () => {
                 progKgInp.value = Math.round((parseFloat(progKgInp.value) + 0.5) * 10) / 10;
             });
-            document.getElementById('prog-apply-kg').addEventListener('click', () => {
-                const kg = parseFloat(progKgInp.value) || 0;
-                if (!kg) return;
+
+            function applyWeightDelta(delta) {
                 const ds = formatDate(selectedDate);
                 const ww = workouts[ds];
                 if (!ww || ww.type !== 'strength') return;
-                // Zapisz wartości z otwartych inputów przed zmianą
+                // Zapisz wartości z otwartych inputów
                 (ww.exercises || []).forEach((_, i) => { if (!ww.exercises[i].collapsed) saveInlineValues(i, ww); });
-                // Dodaj kg do każdej serii każdego ćwiczenia
+                // Oblicz średnie W przed zmianą (do adnotacji)
+                let totalW = 0, cnt = 0;
+                (ww.exercises || []).forEach(ex => (ex.actualSets || []).forEach(s => { totalW += s.w; cnt++; }));
+                const avgBefore = cnt ? Math.round(totalW / cnt * 10) / 10 : 0;
+                // Zastosuj delta
                 (ww.exercises || []).forEach(ex => {
                     if (!ex.actualSets) return;
                     ex.actualSets = ex.actualSets.map(s => ({
-                        ...s,
-                        w: Math.round((s.w + kg) * 2) / 2
+                        ...s, w: Math.max(0, Math.round((s.w + delta) * 2) / 2)
                     }));
                     ex.manuallyEdited = true;
                 });
+                // Zapisz log zmiany per szablon (lub per dzień jeśli brak szablonu)
+                const logKey = ww.templateId || ds;
+                const sign = delta > 0 ? '+' : '';
+                weightChangeLog[logKey] = {
+                    date: ds,
+                    delta,
+                    label: `${sign}${delta} kg · ${ds}`
+                };
+                updateProgAnnotation(ww);
                 renderWorkoutPanel(); saveData();
+            }
+
+            function updateProgAnnotation(ww) {
+                const el = document.getElementById('prog-last-change');
+                if (!el || !ww) return;
+                const logKey = ww.templateId || formatDate(selectedDate);
+                const log = weightChangeLog[logKey];
+                if (log) {
+                    const sign = log.delta > 0 ? '+' : '';
+                    const col = log.delta >= 0 ? 'var(--success)' : 'var(--danger)';
+                    el.innerHTML = `<span style="color:${col};font-weight:700;">${sign}${log.delta} kg</span> ostatnio ${log.date}`;
+                } else {
+                    el.textContent = '';
+                }
+            }
+
+            document.getElementById('prog-apply-add').addEventListener('click', () => {
+                const kg = parseFloat(progKgInp.value) || 0;
+                if (!kg) return;
+                applyWeightDelta(kg);
+            });
+            document.getElementById('prog-apply-sub').addEventListener('click', () => {
+                const kg = parseFloat(progKgInp.value) || 0;
+                if (!kg) return;
+                applyWeightDelta(-kg);
             });
             document.getElementById('harm-next-month').addEventListener('click', () => { harmDate.setMonth(harmDate.getMonth()+1); renderHarmonogramDays(); });
             document.getElementById('create-template-btn').addEventListener('click', ()=>{ document.getElementById('edit-template-id').value = ''; document.getElementById('template-name').value = ''; renderTemplateExercisesTable([]); document.getElementById('template-form').style.display = 'block'; });
